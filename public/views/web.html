@@ -1,0 +1,86 @@
+{{define "web"}}
+<html lang="en">
+<head>
+    <title>IPThing</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <style>
+        table {
+            width: 1024px;
+            text-align: left;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        table td, table th {
+            padding: 4px 10px;
+        }
+        table thead {
+        }
+        table thead th {
+        }
+        table tfoot {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<table>
+    <tbody>
+    <tr>
+        <td>IP Address</td>
+        <td>{{ .IPAddr }}</td>
+    </tr>
+    <tr>
+        <td>Country</td>
+        <td>{{ .Country }}</td>
+    </tr>
+    <tr>
+        <td>Visitor</td>
+        <td>{{ .Visitor }}</td>
+    </tr>
+    <tr>
+        <td>X-Forwarded-For</td>
+        <td>{{ .XFF }}</td>
+    </tr>
+
+    <tr>
+        <td>X-Real-IP</td>
+        <td>{{ .XRI }}</td>
+    </tr>
+    <tr>
+        <td>User-Agent</td>
+        <td>{{ .UserAgent }}</td>
+    </tr>
+    <tr>
+        <td>DNT</td>
+        <td>{{ .DNT }}</td>
+    </tr>
+    <tr>
+        <td>Connection</td>
+        <td>{{ .Connection }}</td>
+    </tr>
+    <tr>
+        <td>Accept</td>
+        <td>{{ .Accept }}</td>
+    </tr>
+    <tr>
+        <td>Accept-Encoding</td>
+        <td>{{ .AcceptEncoding }}</td>
+    </tr>
+    <tr>
+        <td>Accept-Language</td>
+        <td>{{ .AcceptLanguage }}</td>
+    </tr>
+    <tr>
+        <td>Host</td>
+        <td>{{ .Host }}</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+{{end}}
