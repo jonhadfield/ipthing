@@ -70,10 +70,20 @@ func TestStripTrustedFromXFF(t *testing.T) {
 			trustedPos: 1,
 			expected:   "1.1.1.1,2.2.2.2",
 		},
+		{
+			xff:        "1.1.1.1,6.6.6.6,192.168.4.50",
+			trustedPos: 1,
+			expected:   "1.1.1.1,6.6.6.6",
+		},
+		{
+			xff:        "1.1.1.1,6.6.6.6:443,192.168.4.50",
+			trustedPos: 2,
+			expected:   "1.1.1.1",
+		},
 	}
 
 	for x := range in {
-		actual := stripTrustedFromXFF(in[x].xff, in[x].trustedPos)
-		assert.Equal(t, in[x].expected, actual)
+		actual := stripXFF(in[x].xff, in[x].trustedPos, false)
+		require.Equal(t, in[x].expected, actual)
 	}
 }

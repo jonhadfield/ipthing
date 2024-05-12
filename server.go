@@ -20,26 +20,41 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 }
 
 type Req struct {
-	IPAddr         string
-	UserAgent      string
-	Country        string
-	Visitor        string
-	Host           string
-	Connection     string
-	Accept         string
-	AcceptEncoding string
-	AcceptLanguage string
-	DNT            string
-	Language       string
-	Referer        string
-	Method         string
-	MIMEType       string
-	Charset        string
-	XFF            string
-	XRI            string
+	IPAddr         string `json:"ip_addr,omitempty"`
+	UserAgent      string `json:"user_agent,omitempty"`
+	Country        string `json:"country,omitempty"`
+	Visitor        string `json:"visitor,omitempty"`
+	Host           string `json:"host,omitempty"`
+	Accept         string `json:"accept,omitempty"`
+	AcceptEncoding string `json:"accept_encoding,omitempty"`
+	AcceptLanguage string `json:"accept_language,omitempty"`
+	DNT            string `json:"dnt,omitempty"`
+	Language       string `json:"language,omitempty"`
+	Referer        string `json:"referer,omitempty"`
+	Method         string `json:"method,omitempty"`
+	MIMEType       string `json:"mime_type,omitempty"`
+	Charset        string `json:"charset,omitempty"`
+	XFF            string `json:"xff,omitempty"`
+	XRI            string `json:"xri,omitempty"`
 }
 
-func stripTrustedFromXFF(xff string, trustedPos int) string {
+func stripPrivateIPs(xff string) string {
+	if xff == "" {
+		return ""
+	}
+
+	parts := strings.Split(xff, ",")
+	for i := len(parts) - 1; i >= 0; i-- {
+		if strings.Contains(parts[i], ":") {
+			return strings.Join(parts[:i], ",")
+		}
+	}
+
+	return xff
+
+}
+
+func stripXFF(xff string, trustedPos int, stripPrivate bool) string {
 	if xff == "" {
 		return ""
 	}
@@ -55,7 +70,7 @@ func stripTrustedFromXFF(xff string, trustedPos int) string {
 }
 
 func populateReq(r *http.Request) *Req {
-	sXFF := stripTrustedFromXFF(r.Header.Get("X-Forwarded-For"), 1)
+	sXFF := stripXFF(r.Header.Get("X-Forwarded-For"), 1, false)
 
 	req := &Req{
 		IPAddr:         r.Header.Get("Cf-Connecting-Ip"),
@@ -94,11 +109,11 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		r := regexp.MustCompile(`.*(Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks).*`)
 
-		firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
-		if err != nil {
-			return err
-		}
-		e.Logger.Info(firstUntrusted)
+		//firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
+		//if err != nil {
+		//	return err
+		//}
+		//e.Logger.Info(firstUntrusted)
 
 		switch {
 		case !r.MatchString(c.Request().UserAgent()):
