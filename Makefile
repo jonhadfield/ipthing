@@ -74,11 +74,15 @@ build-docker:
 	docker tag ${IMG} ${LATEST}
 	docker tag ${LATEST} ipthing:latest
 
-release-docker: build-docker scan-image docker-push
+#release-docker: build-docker scan-image docker-push
+release-docker: build-docker docker-push
 
 docker-push: login
 	docker --log-level debug push ${IMG}
 	docker --log-level debug push ${LATEST}
+
+redeploy:
+	kubectl -n ipthing rollout restart deployments/ipthing
 
 login:
 	@echo ${CR_PAT} | docker login ghcr.io -u jonhadfield --password-stdin
