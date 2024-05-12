@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -39,14 +39,30 @@ type Req struct {
 	XRI            string
 }
 
-func poplateReq(r *http.Request, reqIP string) *Req {
-	return &Req{
+func stripTrustedFromXFF(xff string, trustedPos int) string {
+	if xff == "" {
+		return ""
+	}
+
+	parts := strings.Split(xff, ",")
+	if len(parts) <= trustedPos {
+		return ""
+	}
+
+	realTrustedPos := len(parts) - trustedPos
+
+	return strings.Join(parts[:realTrustedPos], ",")
+}
+
+func populateReq(r *http.Request) *Req {
+	sXFF := stripTrustedFromXFF(r.Header.Get("X-Forwarded-For"), 1)
+
+	req := &Req{
 		IPAddr:         r.Header.Get("Cf-Connecting-Ip"),
 		Country:        r.Header.Get("Cf-IPcountry"),
 		Visitor:        r.Header.Get("Cf-Visitor"),
 		UserAgent:      r.UserAgent(),
 		Host:           r.Host,
-		Connection:     r.Header.Get("Connection"),
 		Accept:         r.Header.Get("Accept"),
 		AcceptEncoding: r.Header.Get("Accept-Encoding"),
 		AcceptLanguage: r.Header.Get("Accept-Language"),
@@ -56,9 +72,10 @@ func poplateReq(r *http.Request, reqIP string) *Req {
 		Method:         r.Method,
 		MIMEType:       r.Header.Get("Content-Type"),
 		Charset:        r.Header.Get("Charset"),
-		XFF:            r.Header.Get("X-Forwarded-For"),
-		XRI:            r.Header.Get("X-Real-IP"),
+		XFF:            sXFF,
 	}
+
+	return req
 }
 
 func main() {
@@ -75,27 +92,35 @@ func main() {
 	e.File("/favicon-32x32.png", "public/assets/favicon-32x32.png")
 	e.File("/apple-touch-icon.png", "public/assets/apple-touch-icon.png")
 	e.GET("/", func(c echo.Context) error {
-		e.IPExtractor = echo.ExtractIPFromXFFHeader(
-			echo.TrustLoopback(false),   // e.g. ipv4 start with 127.
-			echo.TrustLinkLocal(false),  // e.g. ipv4 start with 169.254
-			echo.TrustPrivateNet(false), // e.g. ipv4 start with 10. or 192.168
-			//echo.TrustIPRange(lbIPRange),
-		)
-		e.Logger.Info("IPExtractor: ", e.IPExtractor(c.Request()))
+		r := regexp.MustCompile(`.*(Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks).*`)
 
-		for k, v := range c.Request().Header {
-			fmt.Printf("%s: %s\n", k, v)
+		firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
+		if err != nil {
+			return err
 		}
+		e.Logger.Info(firstUntrusted)
 
-		ua := c.Request().UserAgent()
 		switch {
-		case strings.Contains(ua, "curl"):
-			consoleData, _ := json.MarshalIndent(poplateReq(c.Request(), e.IPExtractor(c.Request())), "", "  ")
+		case !r.MatchString(c.Request().UserAgent()):
+			consoleData, _ := json.MarshalIndent(populateReq(c.Request()), "", "  ")
 			return c.Render(http.StatusOK, "console", string(consoleData))
 		default:
-			return c.Render(http.StatusOK, "web", poplateReq(c.Request(), e.IPExtractor(c.Request())))
+			return c.Render(http.StatusOK, "web", populateReq(c.Request()))
 		}
-
 	})
+
 	e.Logger.Fatal(e.Start(":1323"))
+}
+
+func parseXFF(e *echo.Echo, r *http.Request, trustLoopback, trustLinkLocal, trustPrivateNet bool) (string, error) {
+	e.IPExtractor = echo.ExtractIPFromXFFHeader(
+		echo.TrustLoopback(trustLoopback),
+		echo.TrustLinkLocal(trustLinkLocal),
+		echo.TrustPrivateNet(trustPrivateNet),
+	)
+
+	ip := e.IPExtractor(r)
+	echo.ExtractIPFromXFFHeader()
+
+	return ip, nil
 }
