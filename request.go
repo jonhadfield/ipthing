@@ -163,6 +163,20 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 		return
 	}
 
+	// Ensure IP exists in ip_info table before saving request
+	// This prevents foreign key constraint violations
+	if _, err := rp.db.GetIPInfo(httpReq.IP); err != nil {
+		// IP doesn't exist, create a minimal entry
+		minimalIPInfo := &IPInfo{
+			IP:         httpReq.IP,
+			LastUpdate: time.Now(),
+		}
+		if err := rp.db.SaveIPInfo(minimalIPInfo); err != nil {
+			rp.logger.Errorf("Failed to save minimal IP info: %v", err)
+			return
+		}
+	}
+
 	// Save HTTP request
 	if err := rp.db.SaveHTTPRequest(httpReq); err != nil {
 		rp.logger.Errorf("Failed to save HTTP request: %v", err)
