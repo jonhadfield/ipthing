@@ -2,13 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"golang.org/x/crypto/acme/autocert"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type Template struct {
@@ -93,14 +98,93 @@ func populateReq(r *http.Request) *Req {
 	return req
 }
 
+type Config struct {
+	UseTLS                   bool     `json:"useTLS"`
+	HostWhitelist            []string `json:"hostWhitelist"`
+	ListenPort               int      `json:"listenPort"`
+	DatabasePath             string   `json:"databasePath,omitempty"`
+	DatabaseType             string   `json:"databaseType,omitempty"`
+	DatabaseConnectionString string   `json:"databaseConnectionString,omitempty"`
+}
+
+func readConfig(filePath string) (*Config, error) {
+	envConfig := os.Getenv("IPTHING_CONFIG")
+	var config Config
+	if envConfig != "" {
+		err := json.Unmarshal([]byte(envConfig), &config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal config from environment variable: %w", err)
+		}
+	} else {
+		f, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+
+		if err = json.Unmarshal(f, &config); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		}
+	}
+
+	// Override with individual environment variables
+	if dbType := os.Getenv("IPTHING_DB_TYPE"); dbType != "" {
+		config.DatabaseType = dbType
+	}
+	
+	if dbPath := os.Getenv("IPTHING_SQLITE_PATH"); dbPath != "" {
+		config.DatabasePath = dbPath
+	}
+	
+	if pgConn := os.Getenv("IPTHING_POSTGRES_URL"); pgConn != "" {
+		config.DatabaseConnectionString = pgConn
+	}
+	
+	// Alternative PostgreSQL connection string env var names
+	if config.DatabaseConnectionString == "" {
+		if pgConn := os.Getenv("DATABASE_URL"); pgConn != "" {
+			config.DatabaseConnectionString = pgConn
+		}
+	}
+
+	return &config, nil
+}
+
 func main() {
 	t := &Template{
 		templates: template.Must(template.ParseGlob("public/views/*.html")),
 	}
 
+	config, err := readConfig("config.json")
+	if err != nil {
+		fmt.Println("failed to read or parse config:", err)
+	}
+
+	// Initialize database
+	db, err := NewDatabase(config)
+	if err != nil {
+		log.Fatalf("Failed to create database: %v", err)
+	}
+
+	if err := db.Connect(); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Migrate(); err != nil {
+		log.Fatalf("Failed to run database migrations: %v", err)
+	}
+
 	e := echo.New()
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("db", db)
+			return next(c)
+		}
+	})
+	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
 	e.Renderer = t
 	e.File("/favicon.ico", "public/assets/favicon.ico")
 	e.File("/favicon-16x16.png", "public/assets/favicon-16x16.png")
@@ -109,22 +193,113 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		r := regexp.MustCompile(`.*(Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks).*`)
 
-		//firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
-		//if err != nil {
-		//	return err
-		//}
-		//e.Logger.Info(firstUntrusted)
+		//_ = dumpRequest(c.Request())
+		firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
+		if err != nil {
+			return err
+		}
+		e.Logger.Info(firstUntrusted)
+
+		// Get database from context
+		db := c.Get("db").(Database)
+		req := populateReq(c.Request())
+
+		// Determine the actual client IP
+		clientIP := req.IPAddr
+		if clientIP == "" {
+			clientIP = firstUntrusted
+		}
+		if clientIP == "" {
+			clientIP = c.RealIP()
+		}
+
+		// Store request data in database
+		if clientIP != "" {
+			go func() {
+				// Prepare query params as JSON first for duplicate checking
+				queryParams := make(map[string][]string)
+				for k, v := range c.Request().URL.Query() {
+					queryParams[k] = v
+				}
+				queryParamsJSON, _ := json.Marshal(queryParams)
+
+				// Check for duplicate request
+				fingerprint := &RequestFingerprint{
+					IP:          clientIP,
+					Path:        c.Request().URL.Path,
+					QueryParams: string(queryParamsJSON),
+					UserAgent:   c.Request().UserAgent(),
+				}
+
+				// Check for duplicates within the last 5 minutes
+				isDuplicate, err := db.IsDuplicateRequest(fingerprint, 5*time.Minute)
+				if err != nil {
+					e.Logger.Errorf("Failed to check for duplicate request: %v", err)
+				}
+
+				if isDuplicate {
+					e.Logger.Debugf("Skipping duplicate request from %s to %s", clientIP, c.Request().URL.Path)
+					return
+				}
+
+				// Get or fetch IP info
+				ipInfo, err := getOrFetchIPInfo(db, clientIP)
+				if err != nil {
+					e.Logger.Errorf("Failed to get IP info: %v", err)
+				} else {
+					e.Logger.Infof("IP info for %s: %+v", clientIP, ipInfo)
+				}
+
+				// Prepare headers as JSON
+				headers := make(map[string][]string)
+				for k, v := range c.Request().Header {
+					headers[k] = v
+				}
+				headersJSON, _ := json.Marshal(headers)
+
+				// Save HTTP request
+				httpReq := &HTTPRequest{
+					IP:          clientIP,
+					Method:      c.Request().Method,
+					Path:        c.Request().URL.Path,
+					UserAgent:   c.Request().UserAgent(),
+					Referer:     c.Request().Header.Get("Referer"),
+					Headers:     string(headersJSON),
+					QueryParams: string(queryParamsJSON),
+					Timestamp:   time.Now(),
+				}
+
+				if err := db.SaveHTTPRequest(httpReq); err != nil {
+					e.Logger.Errorf("Failed to save HTTP request: %v", err)
+				}
+			}()
+		}
 
 		switch {
 		case !r.MatchString(c.Request().UserAgent()):
-			consoleData, _ := json.MarshalIndent(populateReq(c.Request()), "", "  ")
+			consoleData, _ := json.MarshalIndent(req, "", "  ")
 			return c.Render(http.StatusOK, "console", string(consoleData))
 		default:
-			return c.Render(http.StatusOK, "web", populateReq(c.Request()))
+			return c.Render(http.StatusOK, "web", req)
 		}
 	})
 
-	e.Logger.Fatal(e.Start(":1323"))
+	if config.UseTLS {
+		startTLS(e, config.HostWhitelist, config.ListenPort)
+	} else {
+		startHTTP(e, config.ListenPort)
+
+	}
+}
+
+func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
+	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
+	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
+}
+
+func startHTTP(e *echo.Echo, listenPort int) {
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", listenPort)))
 }
 
 func parseXFF(e *echo.Echo, r *http.Request, trustLoopback, trustLinkLocal, trustPrivateNet bool) (string, error) {
