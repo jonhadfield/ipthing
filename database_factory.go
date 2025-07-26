@@ -7,17 +7,30 @@ import (
 	"time"
 )
 
-func NewDatabase(config *Config) (Database, error) {
+func NewDatabase(config *Config) (Database, bool, error) {
 	if config == nil {
-		return nil, fmt.Errorf("config cannot be nil")
+		log.Println("No configuration provided, running without database")
+		return &NoOpDB{}, false, nil
 	}
 
 	dbType := strings.ToLower(config.DatabaseType)
-	if dbType == "" {
-		dbType = "sqlite"
+
+	// Check if any database configuration is provided
+	if dbType == "" && config.DatabasePath == "" && config.DatabaseConnectionString == "" {
+		log.Println("No database configuration provided, running without database")
+		return &NoOpDB{}, false, nil
 	}
 
-	log.Printf("using database: %s", config.DatabaseType)
+	// If database path or connection string is provided but no type, infer the type
+	if dbType == "" {
+		if config.DatabaseConnectionString != "" {
+			dbType = "postgres"
+		} else if config.DatabasePath != "" {
+			dbType = "sqlite"
+		}
+	}
+
+	log.Printf("Using database: %s", dbType)
 
 	switch dbType {
 	case "sqlite":
@@ -25,16 +38,16 @@ func NewDatabase(config *Config) (Database, error) {
 		if dbPath == "" {
 			dbPath = "ipthing.db"
 		}
-		return NewSQLiteDB(dbPath), nil
+		return NewSQLiteDB(dbPath), true, nil
 
 	case "postgres", "postgresql":
 		if config.DatabaseConnectionString == "" {
-			return nil, fmt.Errorf("PostgreSQL connection string is required")
+			return nil, false, fmt.Errorf("PostgreSQL connection string is required")
 		}
-		return NewPostgresDB(config.DatabaseConnectionString), nil
+		return NewPostgresDB(config.DatabaseConnectionString), true, nil
 
 	default:
-		return nil, fmt.Errorf("unsupported database type: %s", config.DatabaseType)
+		return nil, false, fmt.Errorf("unsupported database type: %s", config.DatabaseType)
 	}
 }
 

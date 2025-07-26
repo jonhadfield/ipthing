@@ -91,4 +91,3 @@ func (b *BaseDB) IsDuplicateRequest(fingerprint *RequestFingerprint, timeWindow 
 
 	return count > 0, nil
 }
-

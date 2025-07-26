@@ -91,4 +91,3 @@ func (p *PostgresDB) SaveHTTPRequest(req *HTTPRequest) error {
 	err := p.db.QueryRow(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer, req.Headers, req.QueryParams, req.Timestamp).Scan(&req.ID)
 	return err
 }
-

@@ -17,6 +17,10 @@ import (
 	"time"
 )
 
+const (
+	envIPThingConfig = "IPTHING_CONFIG"
+)
+
 type Template struct {
 	templates *template.Template
 }
@@ -29,6 +33,8 @@ type Req struct {
 	IPAddr         string `json:"ip_addr,omitempty"`
 	UserAgent      string `json:"user_agent,omitempty"`
 	Country        string `json:"country,omitempty"`
+	City           string `json:"city,omitempty"`
+	Org            string `json:"org,omitempty"`
 	Visitor        string `json:"visitor,omitempty"`
 	Host           string `json:"host,omitempty"`
 	Accept         string `json:"accept,omitempty"`
@@ -109,14 +115,14 @@ type Config struct {
 }
 
 func readConfig(filePath string) (*Config, error) {
-	envConfig := os.Getenv("IPTHING_CONFIG")
+	envConfig := os.Getenv(envIPThingConfig)
 	var config Config
 	if envConfig != "" {
 		err := json.Unmarshal([]byte(envConfig), &config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal config from environment variable: %w", err)
 		}
-	} else {
+	} else if filePath != "" {
 		f, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
@@ -125,6 +131,8 @@ func readConfig(filePath string) (*Config, error) {
 		if err = json.Unmarshal(f, &config); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 		}
+	} else {
+		return nil, nil
 	}
 
 	// Override with individual environment variables
@@ -162,28 +170,35 @@ func main() {
 
 	config, err := readConfig("config.json")
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Warning: %v", err)
+		// Continue with default configuration
+		config = &Config{
+			UseTLS:     false,
+			ListenPort: 8080,
+		}
 	}
 
 	// Initialize database
-	db, err := NewDatabase(config)
+	db, dbDefined, err := NewDatabase(config)
 	if err != nil {
 		log.Fatalf("Failed to create database: %v", err)
 	}
+	if dbDefined {
+		if err := db.Connect(); err != nil {
+			log.Fatalf("Failed to connect to database: %v", err)
+		}
+		defer db.Close()
 
-	if err := db.Connect(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
-
-	if err := db.Migrate(); err != nil {
-		log.Fatalf("Failed to run database migrations: %v", err)
+		if err := db.Migrate(); err != nil {
+			log.Fatalf("Failed to run database migrations: %v", err)
+		}
 	}
 
 	e := echo.New()
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			c.Set("db", db)
+			c.Set("dbDefined", dbDefined)
 			return next(c)
 		}
 	})
@@ -208,19 +223,39 @@ func main() {
 
 		// Get database from context
 		db := c.Get("db").(Database)
+		dbDefined := c.Get("dbDefined").(bool)
 		req := populateReq(c.Request())
 
 		// Determine the actual client IP
 		clientIP := req.IPAddr
 		if clientIP == "" {
-			clientIP = firstUntrusted
+			req.IPAddr = firstUntrusted
 		}
+
 		if clientIP == "" {
 			clientIP = c.RealIP()
 		}
 
-		// Store request data in database
+		// Fetch IP info if we have a valid IP (always do this for display purposes)
+		var ipInfo *IPInfo
 		if clientIP != "" {
+			var err error
+			ipInfo, err = getOrFetchIPInfo(db, clientIP)
+			if err != nil {
+				e.Logger.Errorf("Failed to get IP info: %v", err)
+			} else {
+				e.Logger.Infof("IP info for %s: %+v", clientIP, ipInfo)
+				// Add IP info to the request for display
+				if ipInfo != nil {
+					req.Country = ipInfo.Country
+					req.City = ipInfo.City
+					req.Org = ipInfo.Org
+				}
+			}
+		}
+
+		// Store request data in database only if database is configured
+		if dbDefined && clientIP != "" {
 			go func() {
 				// Prepare query params as JSON first for duplicate checking
 				queryParams := make(map[string][]string)
@@ -246,14 +281,6 @@ func main() {
 				if isDuplicate {
 					e.Logger.Debugf("Skipping duplicate request from %s to %s", clientIP, c.Request().URL.Path)
 					return
-				}
-
-				// Get or fetch IP info
-				ipInfo, err := getOrFetchIPInfo(db, clientIP)
-				if err != nil {
-					e.Logger.Errorf("Failed to get IP info: %v", err)
-				} else {
-					e.Logger.Infof("IP info for %s: %+v", clientIP, ipInfo)
 				}
 
 				// Prepare headers as JSON
@@ -290,10 +317,14 @@ func main() {
 		}
 	})
 
-	if config.UseTLS {
+	if config != nil && config.UseTLS {
 		startTLS(e, config.HostWhitelist, config.ListenPort)
 	} else {
-		startHTTP(e, config.ListenPort)
+		listenPort := 8080
+		if config != nil && config.ListenPort > 0 {
+			listenPort = config.ListenPort
+		}
+		startHTTP(e, listenPort)
 	}
 }
 
@@ -301,11 +332,10 @@ func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
-
 }
 
 func startHTTP(e *echo.Echo, listenPort int) {
-	if err := e.Start(fmt.Sprintf(":%d", 80)); err != nil {
+	if err := e.Start(fmt.Sprintf(":%d", listenPort)); err != nil {
 		log.Fatal(err)
 	}
 }
