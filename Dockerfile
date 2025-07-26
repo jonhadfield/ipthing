@@ -4,7 +4,7 @@ WORKDIR /src
 
 COPY ./  .
 ENV GOPROXY=https://proxy.golang.org
-RUN --mount=type=cache,target=/go/pkg/mod \
+RUN --mount=type=cache,target=/go/pkg/mod,id=gomodcache \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go mod download
 
 FROM base AS builder
