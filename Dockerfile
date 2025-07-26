@@ -16,8 +16,8 @@ RUN mkdir /app
 COPY ./  /app/
 WORKDIR /app
 RUN --mount=type=bind,target=. \
-    --mount=type=cache,target=/go/pkg/mod,id=gomodcache-/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build,id=gomodbuild-/root/.cache/go-build \
+    --mount=type=cache,id=gomodcache-/go/pkg/mod,target=/go/pkg/mod \
+    --mount=type=cache,id=gomodbuild-/root/.cache/go-build,target=/root/.cache/go-build \
     DOCKER_BUILDKIT=1 go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
 LABEL maintainer="Jon Hadfield jon@lessknown.co.uk"
