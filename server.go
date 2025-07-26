@@ -199,7 +199,7 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		r := regexp.MustCompile(`.*(Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks).*`)
 
-		//_ = dumpRequest(c.Request())
+		_ = dumpRequest(c.Request())
 		firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
 		if err != nil {
 			return err
