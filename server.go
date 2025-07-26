@@ -290,12 +290,20 @@ func main() {
 		}
 	})
 
+	go func() {
+		log.Printf("starting http listener on port %d", 80)
+		startHTTP(e, 80)
+	}()
+
 	if config.UseTLS {
-		log.Printf("starting tls listener on port %d", config.ListenPort)
-		startTLS(e, config.HostWhitelist, config.ListenPort)
+		go func() {
+			log.Printf("starting tls listener on port %d", config.ListenPort)
+			startTLS(e, config.HostWhitelist, config.ListenPort)
+		}()
+
 	}
-	log.Printf("starting http listener on port %d", 80)
-	startHTTP(e, 80)
+
+	select {}
 }
 
 func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
