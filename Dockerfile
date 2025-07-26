@@ -16,8 +16,8 @@ RUN mkdir /app
 COPY ./  /app/
 WORKDIR /app
 RUN --mount=target=. \
-    --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod,id=gomodcache \
+    --mount=type=cache,target=/root/.cache/go-build,id=gobuildcache \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X \"main.version=${VERSION_VAR}\"" -o /out/server -- *.go
 
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
