@@ -4,7 +4,7 @@ WORKDIR /src
 
 COPY ./ .
 ENV GOPROXY=https://proxy.golang.org
-RUN --mount=type=cache,id=s-b9528c46-a1b7-4e62-853b-d7b0307531e5-go-pkg-mod,target=/go/pkg/mod \
+RUN --mount=type=cache,id=s/b9528c46-a1b7-4e62-853b-d7b0307531e5-go-pkg-mod,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go mod download
 
 FROM base AS builder
@@ -16,8 +16,8 @@ RUN mkdir /app
 COPY ./ /app/
 WORKDIR /app
 
-RUN --mount=type=cache,id=s-b9528c46-a1b7-4e62-853b-d7b0307531e5-go-pkg-mod,target=/go/pkg/mod \
-    --mount=type=cache,id=s-b9528c46-a1b7-4e62-853b-d7b0307531e5-go-build,target=/root/.cache/go-build \
+RUN --mount=type=cache,id=s/b9528c46-a1b7-4e62-853b-d7b0307531e5-go-pkg-mod,target=/go/pkg/mod \
+    --mount=type=cache,id=s/b9528c46-a1b7-4e62-853b-d7b0307531e5-go-build,target=/root/.cache/go-build \
     --mount=type=bind,target=. \
     go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
 
