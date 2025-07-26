@@ -10,7 +10,6 @@ RUN --mount=type=cache,id=s/b9528c46-a1b7-4e62-853b-d7b0307531e5-go-pkg-mod,targ
 FROM base AS builder
 
 ARG VERSION_VAR
-ENV CGO_ENABLED=0
 
 RUN mkdir /app
 COPY ./ /app/
