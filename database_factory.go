@@ -46,6 +46,12 @@ func NewDatabase(config *Config) (Database, bool, error) {
 		}
 		return NewPostgresDB(config.DatabaseConnectionString), true, nil
 
+	case "mariadb", "mysql":
+		if config.DatabaseConnectionString == "" {
+			return nil, false, fmt.Errorf("MariaDB/MySQL connection string is required")
+		}
+		return NewMariaDB(config.DatabaseConnectionString), true, nil
+
 	default:
 		return nil, false, fmt.Errorf("unsupported database type: %s", config.DatabaseType)
 	}
