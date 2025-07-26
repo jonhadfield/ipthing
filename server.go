@@ -149,6 +149,9 @@ func readConfig(filePath string) (*Config, error) {
 		}
 	}
 
+	log.Printf("port: %d", config.ListenPort)
+	log.Printf("use tls: %t", config.UseTLS)
+
 	return &config, nil
 }
 
