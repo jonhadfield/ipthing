@@ -2,8 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/labstack/echo/v4"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 // Handler contains the application handlers
@@ -57,16 +58,16 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"XFF":            req.Header.Get("X-Forwarded-For"),
 		"XRI":            req.Header.Get("X-Real-IP"),
 		// New fields
-		"Proto":          httpReq.Proto,
-		"ContentLength":  httpReq.ContentLength,
-		"RemoteAddr":     httpReq.RemoteAddr,
-		"RequestURI":     httpReq.RequestURI,
-		"Scheme":         httpReq.Scheme,
+		"Proto":         httpReq.Proto,
+		"ContentLength": httpReq.ContentLength,
+		"RemoteAddr":    httpReq.RemoteAddr,
+		"RequestURI":    httpReq.RequestURI,
+		"Scheme":        httpReq.Scheme,
 		// Initialize empty values for fields that templates expect
-		"Country":        "",
-		"City":           "",
-		"Org":            "",
-		"Visitor":        "",
+		"Country": "",
+		"City":    "",
+		"Org":     "",
+		"Visitor": "",
 	}
 
 	// Add TLS information if available

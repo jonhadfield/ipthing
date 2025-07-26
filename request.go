@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
 
 // RequestProcessor handles request processing and IP extraction

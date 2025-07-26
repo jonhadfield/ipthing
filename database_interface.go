@@ -69,10 +69,10 @@ func (b *BaseDB) SaveHTTPRequest(req *HTTPRequest) error {
 		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`
 
-	result, err := b.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer, 
+	result, err := b.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer,
 		req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
-		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme, 
+		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body)
 	if err != nil {
 		return err

@@ -2,11 +2,15 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
+	"log"
+	"net/http"
+	"strings"
+
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
-	"log"
 )
 
 func main() {
@@ -26,7 +30,7 @@ type Application struct {
 	config    *Config
 	db        Database
 	dbDefined bool
-	template  *Template
+	template  *EmbeddedRenderer
 	handler   *Handler
 }
 
@@ -39,10 +43,10 @@ func initializeApplication() (*Application, error) {
 		config = GetDefaultConfig()
 	}
 
-	// Initialize template renderer
-	template, err := NewTemplate("public/views/*.html")
+	// Initialize embedded template renderer
+	template, err := NewEmbeddedRenderer()
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize templates: %w", err)
+		return nil, fmt.Errorf("failed to initialize embedded templates: %w", err)
 	}
 
 	// Initialize database
@@ -118,20 +122,48 @@ func (app *Application) databaseMiddleware() echo.MiddlewareFunc {
 
 // setupRoutes configures all application routes
 func (app *Application) setupRoutes(e *echo.Echo) {
-	// Static files
-	e.File("/favicon.ico", "public/assets/favicon.ico")
-	e.File("/favicon-16x16.png", "public/assets/favicon-16x16.png")
-	e.File("/favicon-32x32.png", "public/assets/favicon-32x32.png")
-	e.File("/apple-touch-icon.png", "public/assets/apple-touch-icon.png")
+	// Embedded static files
+	assetFS := GetAssetFS()
+	e.GET("/favicon.ico", app.serveEmbeddedAsset(assetFS, "favicon.ico"))
+	e.GET("/favicon-16x16.png", app.serveEmbeddedAsset(assetFS, "favicon-16x16.png"))
+	e.GET("/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
+	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
 
 	// Main route
 	e.GET("/", app.rootHandler)
 }
 
+// serveEmbeddedAsset creates a handler for serving embedded static assets
+func (app *Application) serveEmbeddedAsset(assetFS fs.FS, filename string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		file, err := assetFS.Open(filename)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusNotFound)
+		}
+		defer file.Close()
+
+		return c.Stream(http.StatusOK, getContentType(filename), file)
+	}
+}
+
+// getContentType returns the appropriate content type for a file
+func getContentType(filename string) string {
+	switch {
+	case strings.HasSuffix(filename, ".ico"):
+		return "image/x-icon"
+	case strings.HasSuffix(filename, ".png"):
+		return "image/png"
+	case strings.HasSuffix(filename, ".webmanifest"):
+		return "application/manifest+json"
+	default:
+		return "application/octet-stream"
+	}
+}
+
 // rootHandler wraps the main handler and adds request dumping
 func (app *Application) rootHandler(c echo.Context) error {
 	// Dump request for debugging (existing functionality)
-	_ = dumpRequest(c.Request())
+	//_ = dumpRequest(c.Request())
 
 	// Delegate to main handler
 	return app.handler.HandleRoot(c)
@@ -144,7 +176,7 @@ func (app *Application) startServers() {
 	if httpPort <= 0 {
 		httpPort = 8080
 	}
-	
+
 	httpsPort := app.config.ListenPortHTTPS
 	if httpsPort <= 0 {
 		httpsPort = 443
@@ -179,4 +211,3 @@ func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
 }
-

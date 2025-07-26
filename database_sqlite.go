@@ -121,10 +121,10 @@ func (s *SQLiteDB) SaveHTTPRequest(req *HTTPRequest) error {
 		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer, 
+	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer,
 		req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
-		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme, 
+		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body)
 	if err != nil {
 		return err
