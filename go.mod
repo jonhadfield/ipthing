@@ -1,8 +1,6 @@
 module ipthingg
 
-go 1.23.0
-
-toolchain go1.24.4
+go 1.24.4
 
 require (
 	github.com/go-sql-driver/mysql v1.9.3
