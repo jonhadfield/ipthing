@@ -1,354 +1,166 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
-	"io"
 	"log"
-	"net/http"
-	"os"
-	"regexp"
-	"strings"
-	"text/template"
-	"time"
 )
-
-const (
-	envIPThingConfig = "IPTHING_CONFIG"
-)
-
-type Template struct {
-	templates *template.Template
-}
-
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
-
-type Req struct {
-	IPAddr         string `json:"ip_addr,omitempty"`
-	UserAgent      string `json:"user_agent,omitempty"`
-	Country        string `json:"country,omitempty"`
-	City           string `json:"city,omitempty"`
-	Org            string `json:"org,omitempty"`
-	Visitor        string `json:"visitor,omitempty"`
-	Host           string `json:"host,omitempty"`
-	Accept         string `json:"accept,omitempty"`
-	AcceptEncoding string `json:"accept_encoding,omitempty"`
-	AcceptLanguage string `json:"accept_language,omitempty"`
-	DNT            string `json:"dnt,omitempty"`
-	Language       string `json:"language,omitempty"`
-	Referer        string `json:"referer,omitempty"`
-	Method         string `json:"method,omitempty"`
-	MIMEType       string `json:"mime_type,omitempty"`
-	Charset        string `json:"charset,omitempty"`
-	XFF            string `json:"xff,omitempty"`
-	XRI            string `json:"xri,omitempty"`
-}
-
-func stripPrivateIPs(xff string) string {
-	if xff == "" {
-		return ""
-	}
-
-	parts := strings.Split(xff, ",")
-	for i := len(parts) - 1; i >= 0; i-- {
-		if strings.Contains(parts[i], ":") {
-			return strings.Join(parts[:i], ",")
-		}
-	}
-
-	return xff
-
-}
-
-func stripXFF(xff string, trustedPos int, stripPrivate bool) string {
-	if xff == "" {
-		return ""
-	}
-
-	parts := strings.Split(xff, ",")
-	if len(parts) <= trustedPos {
-		return ""
-	}
-
-	realTrustedPos := len(parts) - trustedPos
-
-	return strings.Join(parts[:realTrustedPos], ",")
-}
-
-func populateReq(r *http.Request) *Req {
-	sXFF := stripXFF(r.Header.Get("X-Forwarded-For"), 1, false)
-
-	req := &Req{
-		IPAddr:         r.Header.Get("Cf-Connecting-Ip"),
-		Country:        r.Header.Get("Cf-IPcountry"),
-		Visitor:        r.Header.Get("Cf-Visitor"),
-		UserAgent:      r.UserAgent(),
-		Host:           r.Host,
-		Accept:         r.Header.Get("Accept"),
-		AcceptEncoding: r.Header.Get("Accept-Encoding"),
-		AcceptLanguage: r.Header.Get("Accept-Language"),
-		DNT:            r.Header.Get("DNT"),
-		Language:       r.Header.Get("Language"),
-		Referer:        r.Header.Get("Referer"),
-		Method:         r.Method,
-		MIMEType:       r.Header.Get("Content-Type"),
-		Charset:        r.Header.Get("Charset"),
-		XFF:            sXFF,
-	}
-
-	return req
-}
-
-type Config struct {
-	UseTLS                   bool     `json:"useTLS"`
-	HostWhitelist            []string `json:"hostWhitelist"`
-	ListenPort               int      `json:"listenPort"`
-	DatabasePath             string   `json:"databasePath,omitempty"`
-	DatabaseType             string   `json:"databaseType,omitempty"`
-	DatabaseConnectionString string   `json:"databaseConnectionString,omitempty"`
-}
-
-func readConfig(filePath string) (*Config, error) {
-	envConfig := os.Getenv(envIPThingConfig)
-	var config Config
-	if envConfig != "" {
-		err := json.Unmarshal([]byte(envConfig), &config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal config from environment variable: %w", err)
-		}
-	} else if filePath != "" {
-		f, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
-		}
-
-		if err = json.Unmarshal(f, &config); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-		}
-	} else {
-		return nil, nil
-	}
-
-	// Override with individual environment variables
-	if dbType := os.Getenv("IPTHING_DB_TYPE"); dbType != "" {
-		config.DatabaseType = dbType
-	}
-
-	if dbPath := os.Getenv("IPTHING_SQLITE_PATH"); dbPath != "" {
-		config.DatabasePath = dbPath
-	}
-
-	if pgConn := os.Getenv("IPTHING_POSTGRES_URL"); pgConn != "" {
-		config.DatabaseConnectionString = pgConn
-	}
-
-	// Alternative PostgreSQL connection string env var names
-	if config.DatabaseConnectionString == "" {
-		if pgConn := os.Getenv("DATABASE_URL"); pgConn != "" {
-			log.Println("using DATABASE_URL for PostgreSQL connection string")
-			config.DatabaseConnectionString = pgConn
-			config.DatabaseType = "postgres"
-		}
-	}
-
-	log.Printf("port: %d", config.ListenPort)
-	log.Printf("use tls: %t", config.UseTLS)
-
-	return &config, nil
-}
 
 func main() {
-	t := &Template{
-		templates: template.Must(template.ParseGlob("public/views/*.html")),
+	// Initialize application
+	app, err := initializeApplication()
+	if err != nil {
+		log.Fatalf("Failed to initialize application: %v", err)
 	}
+	defer app.cleanup()
 
-	config, err := readConfig("config.json")
+	// Setup and start server
+	server := app.setupServer()
+	app.startServer(server)
+}
+
+// Application holds all application dependencies
+type Application struct {
+	config    *Config
+	db        Database
+	dbDefined bool
+	template  *Template
+	handler   *Handler
+}
+
+// initializeApplication sets up all application dependencies
+func initializeApplication() (*Application, error) {
+	// Load configuration
+	config, err := ReadConfig("config.json")
 	if err != nil {
 		log.Printf("Warning: %v", err)
-		// Continue with default configuration
-		config = &Config{
-			UseTLS:     false,
-			ListenPort: 8080,
-		}
+		config = GetDefaultConfig()
+	}
+
+	// Initialize template renderer
+	template, err := NewTemplate("public/views/*.html")
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize templates: %w", err)
 	}
 
 	// Initialize database
 	db, dbDefined, err := NewDatabase(config)
 	if err != nil {
-		log.Fatalf("Failed to create database: %v", err)
+		return nil, fmt.Errorf("failed to create database: %w", err)
 	}
+
 	if dbDefined {
 		if err := db.Connect(); err != nil {
-			log.Fatalf("Failed to connect to database: %v", err)
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
 		}
-		defer db.Close()
 
 		if err := db.Migrate(); err != nil {
-			log.Fatalf("Failed to run database migrations: %v", err)
+			return nil, fmt.Errorf("failed to run database migrations: %w", err)
 		}
 	}
 
+	// Initialize request processor and handler
+	requestProcessor := NewRequestProcessor(db, dbDefined, nil) // logger will be set later
+	handler := NewHandler(requestProcessor)
+
+	return &Application{
+		config:    config,
+		db:        db,
+		dbDefined: dbDefined,
+		template:  template,
+		handler:   handler,
+	}, nil
+}
+
+// cleanup closes database connections and other resources
+func (app *Application) cleanup() {
+	if app.dbDefined && app.db != nil {
+		app.db.Close()
+	}
+}
+
+// setupServer configures the Echo server with middleware and routes
+func (app *Application) setupServer() *echo.Echo {
 	e := echo.New()
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("db", db)
-			c.Set("dbDefined", dbDefined)
-			return next(c)
-		}
-	})
-	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+
+	// Set the logger for request processor now that we have the echo instance
+	app.handler.requestProcessor.logger = e.Logger
+
+	// Configure middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	// Cache certificates to avoid issues with rate limits (https://letsencrypt.org/docs/rate-limits)
-	e.Renderer = t
+	e.Use(app.databaseMiddleware())
+
+	// Configure TLS
+	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+
+	// Set template renderer
+	e.Renderer = app.template
+
+	// Setup routes
+	app.setupRoutes(e)
+
+	return e
+}
+
+// databaseMiddleware injects database dependencies into context
+func (app *Application) databaseMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("db", app.db)
+			c.Set("dbDefined", app.dbDefined)
+			return next(c)
+		}
+	}
+}
+
+// setupRoutes configures all application routes
+func (app *Application) setupRoutes(e *echo.Echo) {
+	// Static files
 	e.File("/favicon.ico", "public/assets/favicon.ico")
 	e.File("/favicon-16x16.png", "public/assets/favicon-16x16.png")
 	e.File("/favicon-32x32.png", "public/assets/favicon-32x32.png")
 	e.File("/apple-touch-icon.png", "public/assets/apple-touch-icon.png")
-	e.GET("/", func(c echo.Context) error {
-		r := regexp.MustCompile(`.*(Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks).*`)
 
-		_ = dumpRequest(c.Request())
-		firstUntrusted, err := parseXFF(e, c.Request(), true, true, true)
-		if err != nil {
-			return err
-		}
-		e.Logger.Info(firstUntrusted)
+	// Main route
+	e.GET("/", app.rootHandler)
+}
 
-		// Get database from context
-		db := c.Get("db").(Database)
-		dbDefined := c.Get("dbDefined").(bool)
-		req := populateReq(c.Request())
+// rootHandler wraps the main handler and adds request dumping
+func (app *Application) rootHandler(c echo.Context) error {
+	// Dump request for debugging (existing functionality)
+	_ = dumpRequest(c.Request())
 
-		// Determine the actual client IP
-		clientIP := req.IPAddr
-		if clientIP == "" {
-			req.IPAddr = firstUntrusted
-		}
+	// Delegate to main handler
+	return app.handler.HandleRoot(c)
+}
 
-		if clientIP == "" {
-			clientIP = c.RealIP()
-		}
-
-		// Fetch IP info if we have a valid IP (always do this for display purposes)
-		var ipInfo *IPInfo
-		if clientIP != "" {
-			var err error
-			ipInfo, err = getOrFetchIPInfo(db, clientIP)
-			if err != nil {
-				e.Logger.Errorf("Failed to get IP info: %v", err)
-			} else {
-				e.Logger.Infof("IP info for %s: %+v", clientIP, ipInfo)
-				// Add IP info to the request for display
-				if ipInfo != nil {
-					req.Country = ipInfo.Country
-					req.City = ipInfo.City
-					req.Org = ipInfo.Org
-				}
-			}
-		}
-
-		// Store request data in database only if database is configured
-		if dbDefined && clientIP != "" {
-			go func() {
-				// Prepare query params as JSON first for duplicate checking
-				queryParams := make(map[string][]string)
-				for k, v := range c.Request().URL.Query() {
-					queryParams[k] = v
-				}
-				queryParamsJSON, _ := json.Marshal(queryParams)
-
-				// Check for duplicate request
-				fingerprint := &RequestFingerprint{
-					IP:          clientIP,
-					Path:        c.Request().URL.Path,
-					QueryParams: string(queryParamsJSON),
-					UserAgent:   c.Request().UserAgent(),
-				}
-
-				// Check for duplicates within the last 5 minutes
-				isDuplicate, err := db.IsDuplicateRequest(fingerprint, 5*time.Minute)
-				if err != nil {
-					e.Logger.Errorf("Failed to check for duplicate request: %v", err)
-				}
-
-				if isDuplicate {
-					e.Logger.Debugf("Skipping duplicate request from %s to %s", clientIP, c.Request().URL.Path)
-					return
-				}
-
-				// Prepare headers as JSON
-				headers := make(map[string][]string)
-				for k, v := range c.Request().Header {
-					headers[k] = v
-				}
-				headersJSON, _ := json.Marshal(headers)
-
-				// Save HTTP request
-				httpReq := &HTTPRequest{
-					IP:          clientIP,
-					Method:      c.Request().Method,
-					Path:        c.Request().URL.Path,
-					UserAgent:   c.Request().UserAgent(),
-					Referer:     c.Request().Header.Get("Referer"),
-					Headers:     string(headersJSON),
-					QueryParams: string(queryParamsJSON),
-					Timestamp:   time.Now(),
-				}
-
-				if err := db.SaveHTTPRequest(httpReq); err != nil {
-					e.Logger.Errorf("Failed to save HTTP request: %v", err)
-				}
-			}()
-		}
-
-		switch {
-		case !r.MatchString(c.Request().UserAgent()):
-			consoleData, _ := json.MarshalIndent(req, "", "  ")
-			return c.Render(http.StatusOK, "console", string(consoleData))
-		default:
-			return c.Render(http.StatusOK, "web", req)
-		}
-	})
-
-	if config != nil && config.UseTLS {
-		startTLS(e, config.HostWhitelist, config.ListenPort)
+// startServer starts the HTTP or HTTPS server based on configuration
+func (app *Application) startServer(e *echo.Echo) {
+	if app.config.UseTLS {
+		startTLS(e, app.config.HostWhitelist, app.config.ListenPort)
 	} else {
 		listenPort := 8080
-		if config != nil && config.ListenPort > 0 {
-			listenPort = config.ListenPort
+		if app.config.ListenPort > 0 {
+			listenPort = app.config.ListenPort
 		}
 		startHTTP(e, listenPort)
 	}
 }
 
+// startTLS starts the server with TLS/HTTPS support
 func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
 }
 
+// startHTTP starts the server with HTTP support
 func startHTTP(e *echo.Echo, listenPort int) {
 	if err := e.Start(fmt.Sprintf(":%d", listenPort)); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func parseXFF(e *echo.Echo, r *http.Request, trustLoopback, trustLinkLocal, trustPrivateNet bool) (string, error) {
-	e.IPExtractor = echo.ExtractIPFromXFFHeader(
-		echo.TrustLoopback(trustLoopback),
-		echo.TrustLinkLocal(trustLinkLocal),
-		echo.TrustPrivateNet(trustPrivateNet),
-	)
-
-	ip := e.IPExtractor(r)
-	echo.ExtractIPFromXFFHeader()
-
-	return ip, nil
 }

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestPopulateReq(t *testing.T) {
+func TestRequestProcessor(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Cf-Connecting-Ip", "192.168.1.1")
@@ -27,33 +27,24 @@ func TestPopulateReq(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	expected := &Req{
-		IPAddr:         "192.168.1.1",
-		Country:        "US",
-		Visitor:        "Visitor",
-		UserAgent:      "",
-		Host:           "example.com",
-		Accept:         "application/json",
-		AcceptEncoding: "gzip, deflate, br",
-		AcceptLanguage: "en-US,en;q=0.9",
-		DNT:            "1",
-		Language:       "en",
-		Referer:        "http://localhost",
-		Method:         "GET",
-		MIMEType:       "application/json",
-		Charset:        "UTF-8",
-		XFF:            "",
-	}
+	// Test RequestProcessor with NoOp database
+	db := &NoOpDB{}
+	rp := NewRequestProcessor(db, false, e.Logger)
 
-	actual := populateReq(c.Request())
-	assert.Equal(t, expected, actual)
+	httpReq, _, err := rp.ProcessRequest(c)
+	require.NoError(t, err)
+	require.NotNil(t, httpReq)
+	assert.Equal(t, "192.168.1.1", httpReq.IP)
+	assert.Equal(t, "GET", httpReq.Method)
+	assert.Equal(t, "/", httpReq.Path)
+	assert.Equal(t, "http://localhost", httpReq.Referer)
 }
 
-func TestParseXFF(t *testing.T) {
+func TestParseXForwardedFor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "127.0.0.1:8080"
 	req.Header.Add("X-Forwarded-For", "203.0.113.199, 192.168.1.100")
-	addr, err := parseXFF(echo.New(), req, true, true, true)
+	addr, err := parseXForwardedFor(req)
 	require.NoError(t, err)
 	require.NotEmpty(t, addr)
 	require.Equal(t, "203.0.113.199", addr)
@@ -83,7 +74,25 @@ func TestStripTrustedFromXFF(t *testing.T) {
 	}
 
 	for x := range in {
-		actual := stripXFF(in[x].xff, in[x].trustedPos, false)
+		actual := stripXFFTrustedProxies(in[x].xff, in[x].trustedPos)
 		require.Equal(t, in[x].expected, actual)
+	}
+}
+
+func TestIsWebBrowser(t *testing.T) {
+	tests := []struct {
+		userAgent string
+		expected  bool
+	}{
+		{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", true},
+		{"curl/7.68.0", false},
+		{"wget/1.20.3", false},
+		{"Lynx/2.8.9rel.1", true},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		result := IsWebBrowser(tt.userAgent)
+		assert.Equal(t, tt.expected, result, "Failed for user agent: %s", tt.userAgent)
 	}
 }
