@@ -32,7 +32,7 @@ func TestRequestProcessor(t *testing.T) {
 	db := &NoOpDB{}
 	rp := NewRequestProcessor(db, false, e.Logger)
 
-	httpReq, _, err := rp.ProcessRequest(c)
+	httpReq, _, err := rp.ProcessRequest(c, false)
 	require.NoError(t, err)
 	require.NotNil(t, httpReq)
 	assert.Equal(t, "192.168.1.1", httpReq.IP)

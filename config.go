@@ -13,6 +13,7 @@ const (
 )
 
 type Config struct {
+	BehindProxy     bool     `json:"behindProxy"`
 	HostWhitelist   []string `json:"hostWhitelist"`
 	ListenPortHTTPS int      `json:"listenPortHTTPS"`
 	ListenPortHTTP  int      `json:"listenPortHTTP"`

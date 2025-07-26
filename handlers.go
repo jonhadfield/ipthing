@@ -20,9 +20,9 @@ func NewHandler(requestProcessor *RequestProcessor) *Handler {
 }
 
 // HandleRoot handles the main route that displays client information
-func (h *Handler) HandleRoot(c echo.Context) error {
+func (h *Handler) HandleRoot(c echo.Context, behindProxy bool) error {
 	// Process the request and extract information
-	httpReq, ipInfo, err := h.requestProcessor.ProcessRequest(c)
+	httpReq, ipInfo, err := h.requestProcessor.ProcessRequest(c, false)
 	if err != nil {
 		return err
 	}

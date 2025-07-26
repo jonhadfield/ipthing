@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/labstack/echo/v4"
+	"log"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/labstack/echo/v4"
 )
 
 // RequestProcessor handles request processing and IP extraction
@@ -27,13 +29,25 @@ func NewRequestProcessor(db Database, dbDefined bool, logger echo.Logger) *Reque
 }
 
 // ProcessRequest handles the complete request processing pipeline
-func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInfo, error) {
+func (rp *RequestProcessor) ProcessRequest(c echo.Context, behindProxy bool) (*HTTPRequest, *IPInfo, error) {
 	req := c.Request()
 
-	// Extract client IP using multiple methods
-	clientIP, err := rp.extractClientIP(c)
+	var clientIP string
+
+	var err error
+
+	remoteAddr := c.Request().RemoteAddr
+	clientIP, _, err = net.SplitHostPort(remoteAddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to parse remote address %s: %w", remoteAddr, err)
+	}
+
+	if behindProxy {
+		// Extract client IP using multiple methods
+		clientIP, err = rp.extractClientIP(c)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Fetch IP geolocation info
@@ -74,11 +88,11 @@ func (rp *RequestProcessor) extractClientIP(c echo.Context) (string, error) {
 		return "", err
 	}
 	if firstUntrusted != "" {
+		log.Print("first untrusted IP from X-Forwarded-For: ", firstUntrusted)
 		rp.logger.Info(firstUntrusted)
 		return firstUntrusted, nil
 	}
 
-	// Fall back to Echo's RealIP
 	return c.RealIP(), nil
 }
 
@@ -191,6 +205,8 @@ func parseXForwardedFor(req *http.Request) (string, error) {
 		return "", nil
 	}
 
+	xff = strings.ReplaceAll(xff, " ", "")
+	fmt.Println("GOT X-Forwarded-For:", xff)
 	// Strip private IPs and extract the first untrusted IP
 	strippedXFF := stripXFFTrustedProxies(xff, 1)
 	return stripPrivateIPs(strippedXFF), nil
