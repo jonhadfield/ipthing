@@ -12,12 +12,5 @@ func dumpRequest(r *http.Request) error {
 		}
 	}
 
-	if r.TLS != nil {
-		fmt.Println("TLS Version:", r.TLS.Version)
-		fmt.Println("Cipher Suite:", r.TLS.CipherSuite)
-	} else {
-		fmt.Println("No TLS information available.")
-	}
-
 	return nil
 }

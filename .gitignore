@@ -22,3 +22,8 @@ go.work
 
 # app specific
 config.json
+
+# Server runtime files
+ipthing.log
+ipthing.pid
+ipthing

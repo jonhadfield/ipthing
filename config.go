@@ -13,15 +13,15 @@ const (
 )
 
 type Config struct {
-	UseTLS                   bool     `json:"useTLS"`
-	HostWhitelist            []string `json:"hostWhitelist"`
-	ListenPortHTTPS          int      `json:"listenPortHTTPS"`
-	ListenPortHTTP           int      `json:"listenPortHTTP"`
+	UseTLS          bool     `json:"useTLS"`
+	HostWhitelist   []string `json:"hostWhitelist"`
+	ListenPortHTTPS int      `json:"listenPortHTTPS"`
+	ListenPortHTTP  int      `json:"listenPortHTTP"`
 	// Legacy field for backward compatibility
-	ListenPort               int      `json:"listenPort,omitempty"`
-	DatabasePath             string   `json:"databasePath,omitempty"`
-	DatabaseType             string   `json:"databaseType,omitempty"`
-	DatabaseConnectionString string   `json:"databaseConnectionString,omitempty"`
+	ListenPort               int    `json:"listenPort,omitempty"`
+	DatabasePath             string `json:"databasePath,omitempty"`
+	DatabaseType             string `json:"databaseType,omitempty"`
+	DatabaseConnectionString string `json:"databaseConnectionString,omitempty"`
 }
 
 // ReadConfig reads configuration from file or environment variable with fallbacks
