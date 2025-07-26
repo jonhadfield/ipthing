@@ -59,6 +59,18 @@ func (p *PostgresDB) Migrate() error {
 		headers TEXT,
 		query_params TEXT,
 		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		tls_version INTEGER,
+		tls_cipher_suite INTEGER,
+		tls_server_name TEXT,
+		tls_negotiated_protocol TEXT,
+		proto TEXT,
+		content_length BIGINT,
+		remote_addr TEXT,
+		request_uri TEXT,
+		host TEXT,
+		scheme TEXT,
+		content_type TEXT,
+		body TEXT,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 

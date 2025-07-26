@@ -85,6 +85,44 @@
         <td>Host</td>
         <td>{{ .Host }}</td>
     </tr>
+    <tr>
+        <td>Protocol</td>
+        <td>{{ .Proto }}</td>
+    </tr>
+    <tr>
+        <td>Scheme</td>
+        <td>{{ .Scheme }}</td>
+    </tr>
+    <tr>
+        <td>Remote Address</td>
+        <td>{{ .RemoteAddr }}</td>
+    </tr>
+    <tr>
+        <td>Request URI</td>
+        <td>{{ .RequestURI }}</td>
+    </tr>
+    <tr>
+        <td>Content Length</td>
+        <td>{{ .ContentLength }}</td>
+    </tr>
+    {{ if .TLSVersion }}
+    <tr>
+        <td>TLS Version</td>
+        <td>{{ .TLSVersion }}</td>
+    </tr>
+    <tr>
+        <td>TLS Cipher Suite</td>
+        <td>{{ .TLSCipherSuite }}</td>
+    </tr>
+    <tr>
+        <td>TLS Server Name</td>
+        <td>{{ .TLSServerName }}</td>
+    </tr>
+    <tr>
+        <td>TLS Negotiated Protocol</td>
+        <td>{{ .TLSNegotiatedProtocol }}</td>
+    </tr>
+    {{ end }}
     </tbody>
 </table>
 </body>

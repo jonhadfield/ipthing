@@ -1,0 +1,5 @@
+{
+  "useTLS": false,
+  "listenPortHTTP": 8080,
+  "listenPortHTTPS": 8443
+}
