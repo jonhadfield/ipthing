@@ -35,7 +35,7 @@ func (h *Handler) HandleRoot(c echo.Context) error {
 		return c.Render(http.StatusOK, "web", responseData)
 	} else {
 		consoleData, _ := json.MarshalIndent(responseData, "", "  ")
-		return c.Render(http.StatusOK, "console", string(consoleData))
+		return c.JSONBlob(http.StatusOK, consoleData)
 	}
 }
 
