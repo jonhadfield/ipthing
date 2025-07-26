@@ -15,7 +15,7 @@ ARG VERSION_VAR
 RUN mkdir /app
 COPY ./  /app/
 WORKDIR /app
-RUN --mount=type=bind,target=. \
+RUN --mount=type=bind,id=bind,target=. \
     --mount=type=cache,id=gomodcache-/go/pkg/mod,target=/go/pkg/mod \
     --mount=type=cache,id=gomodbuild-/root/.cache/go-build,target=/root/.cache/go-build \
     DOCKER_BUILDKIT=1 go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
