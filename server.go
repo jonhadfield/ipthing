@@ -291,11 +291,11 @@ func main() {
 	})
 
 	if config.UseTLS {
+		log.Printf("starting tls listener on port %d", config.ListenPort)
 		startTLS(e, config.HostWhitelist, config.ListenPort)
-	} else {
-		startHTTP(e, config.ListenPort)
-
 	}
+	log.Printf("starting http listener on port %d", 80)
+	startHTTP(e, 80)
 }
 
 func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
@@ -305,7 +305,7 @@ func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
 }
 
 func startHTTP(e *echo.Echo, listenPort int) {
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", listenPort)))
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", 80)))
 }
 
 func parseXFF(e *echo.Echo, r *http.Request, trustLoopback, trustLinkLocal, trustPrivateNet bool) (string, error) {
