@@ -56,11 +56,25 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"Charset":        req.Header.Get("Charset"),
 		"XFF":            req.Header.Get("X-Forwarded-For"),
 		"XRI":            req.Header.Get("X-Real-IP"),
+		// New fields
+		"Proto":          httpReq.Proto,
+		"ContentLength":  httpReq.ContentLength,
+		"RemoteAddr":     httpReq.RemoteAddr,
+		"RequestURI":     httpReq.RequestURI,
+		"Scheme":         httpReq.Scheme,
 		// Initialize empty values for fields that templates expect
 		"Country":        "",
 		"City":           "",
 		"Org":            "",
 		"Visitor":        "",
+	}
+
+	// Add TLS information if available
+	if httpReq.TLSVersion > 0 {
+		data["TLSVersion"] = getTLSVersionString(httpReq.TLSVersion)
+		data["TLSCipherSuite"] = getTLSCipherSuiteString(httpReq.TLSCipherSuite)
+		data["TLSServerName"] = httpReq.TLSServerName
+		data["TLSNegotiatedProtocol"] = httpReq.TLSNegotiatedProtocol
 	}
 
 	// Add Cloudflare specific headers

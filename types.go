@@ -17,15 +17,30 @@ type IPInfo struct {
 }
 
 type HTTPRequest struct {
-	ID          int64
-	IP          string
-	Method      string
-	Path        string
-	UserAgent   string
-	Referer     string
-	Headers     string
-	QueryParams string
-	Timestamp   time.Time
+	ID               int64
+	IP               string
+	Method           string
+	Path             string
+	UserAgent        string
+	Referer          string
+	Headers          string
+	QueryParams      string
+	Timestamp        time.Time
+	// TLS Information
+	TLSVersion       uint16
+	TLSCipherSuite   uint16
+	TLSServerName    string
+	TLSNegotiatedProtocol string
+	// Additional request details
+	Proto            string  // HTTP/1.1, HTTP/2.0, etc.
+	ContentLength    int64
+	RemoteAddr       string
+	RequestURI       string
+	Host             string
+	Scheme           string  // http or https
+	// Request body info
+	ContentType      string
+	Body             string  // First 1KB of body for debugging
 }
 
 type RequestFingerprint struct {

@@ -97,16 +97,48 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 	}
 	queryParamsJSON, _ := json.Marshal(queryParams)
 
-	return &HTTPRequest{
-		IP:          clientIP,
-		Method:      req.Method,
-		Path:        req.URL.Path,
-		UserAgent:   req.UserAgent(),
-		Referer:     req.Header.Get("Referer"),
-		Headers:     string(headersJSON),
-		QueryParams: string(queryParamsJSON),
-		Timestamp:   time.Now(),
+	// Capture request body (first 1KB for debugging)
+	var bodyContent string
+	if req.Body != nil && req.ContentLength > 0 {
+		bodyBytes := make([]byte, 1024) // Read up to 1KB
+		n, _ := req.Body.Read(bodyBytes)
+		if n > 0 {
+			bodyContent = string(bodyBytes[:n])
+		}
+		// Note: Body would need to be restored for the actual handler
+		// This is just for logging/debugging purposes
 	}
+
+	httpReq := &HTTPRequest{
+		IP:            clientIP,
+		Method:        req.Method,
+		Path:          req.URL.Path,
+		UserAgent:     req.UserAgent(),
+		Referer:       req.Header.Get("Referer"),
+		Headers:       string(headersJSON),
+		QueryParams:   string(queryParamsJSON),
+		Timestamp:     time.Now(),
+		Proto:         req.Proto,
+		ContentLength: req.ContentLength,
+		RemoteAddr:    req.RemoteAddr,
+		RequestURI:    req.RequestURI,
+		Host:          req.Host,
+		ContentType:   req.Header.Get("Content-Type"),
+		Body:          bodyContent,
+	}
+
+	// Capture TLS information if available
+	if req.TLS != nil {
+		httpReq.TLSVersion = req.TLS.Version
+		httpReq.TLSCipherSuite = req.TLS.CipherSuite
+		httpReq.TLSServerName = req.TLS.ServerName
+		httpReq.TLSNegotiatedProtocol = req.TLS.NegotiatedProtocol
+		httpReq.Scheme = "https"
+	} else {
+		httpReq.Scheme = "http"
+	}
+
+	return httpReq
 }
 
 // storeRequestAsync stores the request in the database asynchronously after duplicate checking

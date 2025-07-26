@@ -56,6 +56,18 @@ func (s *SQLiteDB) Migrate() error {
 		headers TEXT,
 		query_params TEXT,
 		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		tls_version INTEGER,
+		tls_cipher_suite INTEGER,
+		tls_server_name TEXT,
+		tls_negotiated_protocol TEXT,
+		proto TEXT,
+		content_length INTEGER,
+		remote_addr TEXT,
+		request_uri TEXT,
+		host TEXT,
+		scheme TEXT,
+		content_type TEXT,
+		body TEXT,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -104,10 +116,16 @@ func (s *SQLiteDB) GetIPInfo(ip string) (*IPInfo, error) {
 
 func (s *SQLiteDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
-	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
+		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
+		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer, req.Headers, req.QueryParams, req.Timestamp)
+	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer, 
+		req.Headers, req.QueryParams, req.Timestamp,
+		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
+		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme, 
+		req.ContentType, req.Body)
 	if err != nil {
 		return err
 	}

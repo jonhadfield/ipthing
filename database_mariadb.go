@@ -59,6 +59,18 @@ func (m *MariaDB) Migrate() error {
 		headers TEXT,
 		query_params TEXT,
 		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		tls_version INT,
+		tls_cipher_suite INT,
+		tls_server_name VARCHAR(255),
+		tls_negotiated_protocol VARCHAR(50),
+		proto VARCHAR(20),
+		content_length BIGINT,
+		remote_addr VARCHAR(100),
+		request_uri TEXT,
+		host VARCHAR(255),
+		scheme VARCHAR(10),
+		content_type VARCHAR(255),
+		body TEXT,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
