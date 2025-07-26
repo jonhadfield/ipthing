@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type SQLiteDB struct {
@@ -131,4 +131,3 @@ func (s *SQLiteDB) IsDuplicateRequest(fingerprint *RequestFingerprint, timeWindo
 
 	return count > 0, nil
 }
-
