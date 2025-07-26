@@ -8,6 +8,10 @@ import (
 )
 
 func NewDatabase(config *Config) (Database, error) {
+	if config == nil {
+		return nil, fmt.Errorf("config cannot be nil")
+	}
+
 	dbType := strings.ToLower(config.DatabaseType)
 	if dbType == "" {
 		dbType = "sqlite"
