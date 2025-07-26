@@ -15,11 +15,10 @@ ARG VERSION_VAR
 RUN mkdir /app
 COPY ./  /app/
 WORKDIR /app
-RUN --mount=target=. \
-    --mount=type=cache,id=gomodcache,target=/go/pkg/mod \
-    --mount=type=cache,id=gobuildcache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X \"main.version=${VERSION_VAR}\"" -o /out/server -- *.go
-
+RUN --mount=type=bind,target=. \
+    --mount=type=cache,target=/go/pkg/mod,id=gomodcache \
+    --mount=type=cache,target=/root/.cache/go-build,id=gobuildcache \
+    go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
 LABEL maintainer="Jon Hadfield jon@lessknown.co.uk"
 COPY public /app/public
