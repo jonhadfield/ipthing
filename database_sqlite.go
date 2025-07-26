@@ -20,7 +20,7 @@ func NewSQLiteDB(dbPath string) *SQLiteDB {
 }
 
 func (s *SQLiteDB) Connect() error {
-	db, err := sql.Open("sqlite", s.dbPath)
+	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s", s.dbPath))
 	if err != nil {
 		return fmt.Errorf("failed to open SQLite database: %w", err)
 	}
