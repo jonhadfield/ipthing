@@ -17,9 +17,8 @@ func main() {
 	}
 	defer app.cleanup()
 
-	// Setup and start server
-	server := app.setupServer()
-	app.startServer(server)
+	// Setup and start servers
+	app.startServers()
 }
 
 // Application holds all application dependencies
@@ -138,17 +137,40 @@ func (app *Application) rootHandler(c echo.Context) error {
 	return app.handler.HandleRoot(c)
 }
 
-// startServer starts the HTTP or HTTPS server based on configuration
-func (app *Application) startServer(e *echo.Echo) {
-	if app.config.UseTLS {
-		startTLS(e, app.config.HostWhitelist, app.config.ListenPort)
-	} else {
-		listenPort := 8080
-		if app.config.ListenPort > 0 {
-			listenPort = app.config.ListenPort
-		}
-		startHTTP(e, listenPort)
+// startServers starts both HTTP and HTTPS servers based on configuration
+func (app *Application) startServers() {
+	// Set default ports if not configured
+	httpPort := app.config.ListenPortHTTP
+	if httpPort <= 0 {
+		httpPort = 8080
 	}
+	
+	httpsPort := app.config.ListenPortHTTPS
+	if httpsPort <= 0 {
+		httpsPort = 443
+	}
+
+	// Always start HTTP server
+	httpServer := app.setupServer()
+	go func() {
+		log.Printf("Starting HTTP server on port %d", httpPort)
+		if err := httpServer.Start(fmt.Sprintf(":%d", httpPort)); err != nil {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
+
+	// Start HTTPS server if TLS is enabled
+	if app.config.UseTLS {
+		httpsServer := app.setupServer()
+		go func() {
+			log.Printf("Starting HTTPS server on port %d", httpsPort)
+			startTLS(httpsServer, app.config.HostWhitelist, httpsPort)
+		}()
+	}
+
+	// Keep the main thread alive
+	log.Printf("Servers started. Press Ctrl+C to stop.")
+	select {}
 }
 
 // startTLS starts the server with TLS/HTTPS support
@@ -158,9 +180,3 @@ func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
 	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
 }
 
-// startHTTP starts the server with HTTP support
-func startHTTP(e *echo.Echo, listenPort int) {
-	if err := e.Start(fmt.Sprintf(":%d", listenPort)); err != nil {
-		log.Fatal(err)
-	}
-}
