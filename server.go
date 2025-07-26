@@ -290,30 +290,24 @@ func main() {
 		}
 	})
 
-	go func() {
-		log.Printf("starting http listener on port %d", 80)
-		startHTTP(e, 80)
-	}()
-
 	if config.UseTLS {
-		go func() {
-			log.Printf("starting tls listener on port %d", config.ListenPort)
-			startTLS(e, config.HostWhitelist, config.ListenPort)
-		}()
-
+		startTLS(e, config.HostWhitelist, config.ListenPort)
+	} else {
+		startHTTP(e, config.ListenPort)
 	}
-
-	select {}
 }
 
 func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
+
 }
 
 func startHTTP(e *echo.Echo, listenPort int) {
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", 80)))
+	if err := e.Start(fmt.Sprintf(":%d", 80)); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func parseXFF(e *echo.Echo, r *http.Request, trustLoopback, trustLinkLocal, trustPrivateNet bool) (string, error) {
