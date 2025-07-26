@@ -87,6 +87,63 @@ redeploy:
 login:
 	@echo ${CR_PAT} | docker login ghcr.io -u jonhadfield --password-stdin
 
+# Server management targets
+start: ## Start the server in foreground
+	go run .
+
+start-background: ## Start the server in background
+	@echo "Starting IPThing server in background..."
+	@nohup go run . > ipthing.log 2>&1 & echo $$! > ipthing.pid
+	@echo "Server started with PID: $$(cat ipthing.pid)"
+	@echo "Logs are being written to ipthing.log"
+
+stop: ## Stop the background server
+	@if [ -f ipthing.pid ]; then \
+		PID=$$(cat ipthing.pid); \
+		if kill -0 $$PID 2>/dev/null; then \
+			echo "Stopping IPThing server (PID: $$PID)..."; \
+			pkill -P $$PID 2>/dev/null || true; \
+			kill $$PID 2>/dev/null || true; \
+			rm -f ipthing.pid; \
+			echo "Server stopped."; \
+		else \
+			echo "No server running with PID: $$PID"; \
+			rm -f ipthing.pid; \
+		fi \
+	else \
+		echo "No PID file found. Attempting to find and stop ipthing processes..."; \
+		pkill -f "go run ." || echo "No running ipthing process found."; \
+	fi
+
+restart: stop start-background ## Restart the server in background
+
+status: ## Check if the server is running
+	@if [ -f ipthing.pid ]; then \
+		PID=$$(cat ipthing.pid); \
+		if kill -0 $$PID 2>/dev/null; then \
+			echo "IPThing server is running (PID: $$PID)"; \
+		else \
+			echo "IPThing server is not running (stale PID file: $$PID)"; \
+			rm -f ipthing.pid; \
+		fi \
+	else \
+		if pgrep -f "go run ." >/dev/null; then \
+			echo "IPThing server is running (no PID file)"; \
+		else \
+			echo "IPThing server is not running"; \
+		fi \
+	fi
+
+logs: ## Tail the server logs
+	@if [ -f ipthing.log ]; then \
+		tail -f ipthing.log; \
+	else \
+		echo "No log file found. Start the server with 'make start-background' first."; \
+	fi
+
+clean-logs: ## Clean server logs and PID file
+	rm -f ipthing.log ipthing.pid
+
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
