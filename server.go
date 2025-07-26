@@ -162,7 +162,7 @@ func main() {
 
 	config, err := readConfig("config.json")
 	if err != nil {
-		fmt.Println("failed to read or parse config:", err)
+		log.Fatal(err)
 	}
 
 	// Initialize database
