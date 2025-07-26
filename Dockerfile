@@ -4,7 +4,7 @@ WORKDIR /src
 
 COPY ./  .
 ENV GOPROXY=https://proxy.golang.org
-RUN --mount=type=cache,id=/go/pkg/mod,target=/go/pkg/mod \
+RUN --mount=type=cache,id=gomodcache-/go/pkg/mod,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go mod download
 
 FROM base AS builder
@@ -16,8 +16,8 @@ RUN mkdir /app
 COPY ./  /app/
 WORKDIR /app
 RUN --mount=type=bind,target=. \
-    --mount=type=cache,target=/go/pkg/mod,id=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build,id=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod,id=gomodcache-/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build,id=gomodbuild-/root/.cache/go-build \
     DOCKER_BUILDKIT=1 go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
 LABEL maintainer="Jon Hadfield jon@lessknown.co.uk"
