@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
@@ -130,19 +131,21 @@ func readConfig(filePath string) (*Config, error) {
 	if dbType := os.Getenv("IPTHING_DB_TYPE"); dbType != "" {
 		config.DatabaseType = dbType
 	}
-	
+
 	if dbPath := os.Getenv("IPTHING_SQLITE_PATH"); dbPath != "" {
 		config.DatabasePath = dbPath
 	}
-	
+
 	if pgConn := os.Getenv("IPTHING_POSTGRES_URL"); pgConn != "" {
 		config.DatabaseConnectionString = pgConn
 	}
-	
+
 	// Alternative PostgreSQL connection string env var names
 	if config.DatabaseConnectionString == "" {
 		if pgConn := os.Getenv("DATABASE_URL"); pgConn != "" {
+			log.Println("using DATABASE_URL for PostgreSQL connection string")
 			config.DatabaseConnectionString = pgConn
+			config.DatabaseType = "postgres"
 		}
 	}
 
