@@ -13,7 +13,6 @@ const (
 )
 
 type Config struct {
-	UseTLS          bool     `json:"useTLS"`
 	HostWhitelist   []string `json:"hostWhitelist"`
 	ListenPortHTTPS int      `json:"listenPortHTTPS"`
 	ListenPortHTTP  int      `json:"listenPortHTTP"`
@@ -129,13 +128,11 @@ func logConfigSettings(config *Config) {
 
 	log.Printf("HTTP port: %d", config.ListenPortHTTP)
 	log.Printf("HTTPS port: %d", config.ListenPortHTTPS)
-	log.Printf("use tls: %t", config.UseTLS)
 }
 
 // GetDefaultConfig returns a default configuration
 func GetDefaultConfig() *Config {
 	return &Config{
-		UseTLS:          false,
 		ListenPortHTTP:  8080,
 		ListenPortHTTPS: 443,
 	}

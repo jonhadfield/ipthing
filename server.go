@@ -192,7 +192,7 @@ func (app *Application) startServers() {
 	}()
 
 	// Start HTTPS server if TLS is enabled
-	if app.config.UseTLS {
+	if app.config.ListenPortHTTPS != 0 {
 		httpsServer := app.setupServer()
 		go func() {
 			log.Printf("Starting HTTPS server on port %d", httpsPort)
