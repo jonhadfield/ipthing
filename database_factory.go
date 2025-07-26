@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
@@ -11,6 +12,8 @@ func NewDatabase(config *Config) (Database, error) {
 	if dbType == "" {
 		dbType = "sqlite"
 	}
+
+	log.Printf("using database: %s", config.DatabaseType)
 
 	switch dbType {
 	case "sqlite":
@@ -34,4 +37,3 @@ func NewDatabase(config *Config) (Database, error) {
 func shouldUpdateIPInfo(lastUpdate time.Time) bool {
 	return time.Since(lastUpdate) > 24*time.Hour
 }
-
