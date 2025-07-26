@@ -16,14 +16,11 @@ RUN mkdir /app
 COPY ./ /app/
 WORKDIR /app
 
-RUN --mount=type=cache,id=s/b9528c46-a1b7-4e62-853b-d7b0307531e5-go-pkg-mod,target=/go/pkg/mod \
-    --mount=type=cache,id=s/b9528c46-a1b7-4e62-853b-d7b0307531e5-go-build,target=/root/.cache/go-build \
-    --mount=type=bind,target=. \
-    go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
+RUN go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
 
 ### ✅ This was missing before!
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
- 
+
 LABEL maintainer="Jon Hadfield jon@lessknown.co.uk"
 
 COPY public /app/public
