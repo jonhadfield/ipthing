@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 )
 
 const (
@@ -14,7 +15,10 @@ const (
 type Config struct {
 	UseTLS                   bool     `json:"useTLS"`
 	HostWhitelist            []string `json:"hostWhitelist"`
-	ListenPort               int      `json:"listenPort"`
+	ListenPortHTTPS          int      `json:"listenPortHTTPS"`
+	ListenPortHTTP           int      `json:"listenPortHTTP"`
+	// Legacy field for backward compatibility
+	ListenPort               int      `json:"listenPort,omitempty"`
 	DatabasePath             string   `json:"databasePath,omitempty"`
 	DatabaseType             string   `json:"databaseType,omitempty"`
 	DatabaseConnectionString string   `json:"databaseConnectionString,omitempty"`
@@ -32,6 +36,9 @@ func ReadConfig(filePath string) (*Config, error) {
 
 	// Apply legacy environment variable support
 	applyLegacyEnvironmentVariables(config)
+
+	// Handle legacy listenPort field for backward compatibility
+	handleLegacyPortConfig(config)
 
 	logConfigSettings(config)
 
@@ -83,6 +90,19 @@ func applyEnvironmentOverrides(config *Config) {
 	if pgConn := os.Getenv("IPTHING_POSTGRES_URL"); pgConn != "" {
 		config.DatabaseConnectionString = pgConn
 	}
+
+	// Port configuration environment variables
+	if httpPort := os.Getenv("IPTHING_HTTP_PORT"); httpPort != "" {
+		if port, err := parseInt(httpPort); err == nil {
+			config.ListenPortHTTP = port
+		}
+	}
+
+	if httpsPort := os.Getenv("IPTHING_HTTPS_PORT"); httpsPort != "" {
+		if port, err := parseInt(httpsPort); err == nil {
+			config.ListenPortHTTPS = port
+		}
+	}
 }
 
 // applyLegacyEnvironmentVariables handles legacy environment variable names
@@ -107,14 +127,38 @@ func logConfigSettings(config *Config) {
 		return
 	}
 
-	log.Printf("port: %d", config.ListenPort)
+	log.Printf("HTTP port: %d", config.ListenPortHTTP)
+	log.Printf("HTTPS port: %d", config.ListenPortHTTPS)
 	log.Printf("use tls: %t", config.UseTLS)
 }
 
 // GetDefaultConfig returns a default configuration
 func GetDefaultConfig() *Config {
 	return &Config{
-		UseTLS:     false,
-		ListenPort: 8080,
+		UseTLS:          false,
+		ListenPortHTTP:  8080,
+		ListenPortHTTPS: 443,
 	}
+}
+
+// handleLegacyPortConfig handles backward compatibility for the old listenPort field
+func handleLegacyPortConfig(config *Config) {
+	if config == nil {
+		return
+	}
+
+	// If legacy listenPort is set but new ports are not, use legacy value
+	if config.ListenPort > 0 {
+		if config.ListenPortHTTP <= 0 {
+			config.ListenPortHTTP = config.ListenPort
+		}
+		if config.ListenPortHTTPS <= 0 {
+			config.ListenPortHTTPS = config.ListenPort
+		}
+	}
+}
+
+// parseInt is a helper function to parse integer strings
+func parseInt(s string) (int, error) {
+	return strconv.Atoi(s)
 }
