@@ -103,6 +103,30 @@ func (app *Application) setupServer() *echo.Echo {
 	// Configure middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	// Configure rate limiter
+	// Allow 2 requests per second with a burst of 5
+	limiterStore := middleware.NewRateLimiterMemoryStore(2)
+	e.Use(middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: limiterStore,
+		IdentifierExtractor: func(c echo.Context) (string, error) {
+			// Extract real IP considering proxy headers
+			ip := c.RealIP()
+			return ip, nil
+		},
+		ErrorHandler: func(c echo.Context, err error) error {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "unable to identify client",
+			})
+		},
+		DenyHandler: func(c echo.Context, identifier string, err error) error {
+			return c.JSON(http.StatusTooManyRequests, map[string]string{
+				"error":   "rate limit exceeded",
+				"message": "too many requests, please try again later",
+			})
+		},
+	}))
+
 	e.Use(app.databaseMiddleware())
 
 	// Configure TLS
