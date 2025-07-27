@@ -161,8 +161,8 @@ func (h *Handler) buildStructuredResponse(req *http.Request, httpReq *HTTPReques
 		"dnt": true, "content-type": true, "user-agent": true,
 		"host": true, "content-length": true,
 		strings.ToLower(HeaderCloudflareConnectingIP): true,
-		strings.ToLower(HeaderCloudflareiPCountry): true,
-		strings.ToLower(HeaderCloudflareVisitor): true,
+		strings.ToLower(HeaderCloudflareiPCountry):    true,
+		strings.ToLower(HeaderCloudflareVisitor):      true,
 	}
 
 	otherHeaders := make(map[string]interface{})

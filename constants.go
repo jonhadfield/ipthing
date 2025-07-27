@@ -23,10 +23,10 @@ const (
 
 // MIME types
 const (
-	MimeTypeIcon         = "image/x-icon"
-	MimeTypePNG          = "image/png"
-	MimeTypeManifest     = "application/manifest+json"
-	MimeTypeOctetStream  = "application/octet-stream"
+	MimeTypeIcon        = "image/x-icon"
+	MimeTypePNG         = "image/png"
+	MimeTypeManifest    = "application/manifest+json"
+	MimeTypeOctetStream = "application/octet-stream"
 )
 
 // HTTP headers
@@ -40,9 +40,9 @@ const (
 
 // Database table and column names
 const (
-	TableIPInfo      = "ip_info"
+	TableIPInfo       = "ip_info"
 	TableHTTPRequests = "http_requests"
-	
+
 	// Common column names
 	ColumnIP          = "ip"
 	ColumnMethod      = "method"
@@ -68,13 +68,13 @@ const (
 
 // Configuration environment variables
 const (
-	EnvIPThingConfig       = "IPTHING_CONFIG"
-	EnvIPThingDBType       = "IPTHING_DB_TYPE"
-	EnvIPThingSQLitePath   = "IPTHING_SQLITE_PATH"
-	EnvIPThingPostgresURL  = "IPTHING_POSTGRES_URL"
-	EnvIPThingHTTPPort     = "IPTHING_HTTP_PORT"
-	EnvIPThingHTTPSPort    = "IPTHING_HTTPS_PORT"
-	EnvDatabaseURL         = "DATABASE_URL"
+	EnvIPThingConfig      = "IPTHING_CONFIG"
+	EnvIPThingDBType      = "IPTHING_DB_TYPE"
+	EnvIPThingSQLitePath  = "IPTHING_SQLITE_PATH"
+	EnvIPThingPostgresURL = "IPTHING_POSTGRES_URL"
+	EnvIPThingHTTPPort    = "IPTHING_HTTP_PORT"
+	EnvIPThingHTTPSPort   = "IPTHING_HTTPS_PORT"
+	EnvDatabaseURL        = "DATABASE_URL"
 )
 
 // Database types
@@ -92,6 +92,6 @@ const (
 
 // Default file sizes and limits
 const (
-	DefaultReadLimit   = 2000 // lines for file reading
-	MaxLineLength      = 2000 // characters per line
+	DefaultReadLimit = 2000 // lines for file reading
+	MaxLineLength    = 2000 // characters per line
 )

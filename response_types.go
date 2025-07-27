@@ -43,8 +43,8 @@ type HeadersSection struct {
 
 // TLSInfo contains TLS connection details
 type TLSInfo struct {
-	Version             string `json:"version"`
-	CipherSuite         string `json:"cipher_suite"`
-	ServerName          string `json:"server_name,omitempty"`
-	NegotiatedProtocol  string `json:"negotiated_protocol,omitempty"`
+	Version            string `json:"version"`
+	CipherSuite        string `json:"cipher_suite"`
+	ServerName         string `json:"server_name,omitempty"`
+	NegotiatedProtocol string `json:"negotiated_protocol,omitempty"`
 }

@@ -43,3 +43,9 @@ func (n *NoOpDB) IsDuplicateRequest(fingerprint *RequestFingerprint, timeWindow 
 	// Never duplicate since we're not storing anything
 	return false, nil
 }
+
+func (n *NoOpDB) Verify() error {
+	// NoOp database doesn't have any real tables or indexes to verify
+	// This is a successful no-op
+	return nil
+}

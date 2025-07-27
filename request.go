@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"log"
 	"net"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
 
 // RequestProcessor handles request processing and IP extraction

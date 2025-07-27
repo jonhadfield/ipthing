@@ -9,6 +9,7 @@ type Database interface {
 	Connect() error
 	Close() error
 	Migrate() error
+	Verify() error
 
 	SaveIPInfo(info *IPInfo) error
 	GetIPInfo(ip string) (*IPInfo, error)

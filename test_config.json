@@ -1,5 +1,6 @@
 {
-  "useTLS": false,
+  "db_type": "sqlite",
+  "sqlite_path": "./test_autofix.db",
   "listenPortHTTP": 8080,
-  "listenPortHTTPS": 8443
+  "listenPortHTTPS": 0
 }

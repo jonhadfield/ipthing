@@ -67,6 +67,10 @@ func initializeApplication() (*Application, error) {
 		if err := db.Migrate(); err != nil {
 			return nil, fmt.Errorf("failed to run database migrations: %w", err)
 		}
+
+		if err := db.Verify(); err != nil {
+			return nil, fmt.Errorf("database verification failed: %w", err)
+		}
 	}
 
 	// Initialize request processor and handler
