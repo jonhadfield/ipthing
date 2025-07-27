@@ -98,41 +98,12 @@ start-background: ## Start the server in background
 	@echo "Logs are being written to ipthing.log"
 
 stop: ## Stop the background server
-	@if [ -f ipthing.pid ]; then \
-		PID=$$(cat ipthing.pid); \
-		if kill -0 $$PID 2>/dev/null; then \
-			echo "Stopping IPThing server (PID: $$PID)..."; \
-			pkill -P $$PID 2>/dev/null || true; \
-			kill $$PID 2>/dev/null || true; \
-			rm -f ipthing.pid; \
-			echo "Server stopped."; \
-		else \
-			echo "No server running with PID: $$PID"; \
-			rm -f ipthing.pid; \
-		fi \
-	else \
-		echo "No PID file found. Attempting to find and stop ipthing processes..."; \
-		pkill -f "go run ." || echo "No running ipthing process found."; \
-	fi
+	@./scripts/stop-server.sh
 
 restart: stop start-background ## Restart the server in background
 
 status: ## Check if the server is running
-	@if [ -f ipthing.pid ]; then \
-		PID=$$(cat ipthing.pid); \
-		if kill -0 $$PID 2>/dev/null; then \
-			echo "IPThing server is running (PID: $$PID)"; \
-		else \
-			echo "IPThing server is not running (stale PID file: $$PID)"; \
-			rm -f ipthing.pid; \
-		fi \
-	else \
-		if pgrep -f "go run ." >/dev/null; then \
-			echo "IPThing server is running (no PID file)"; \
-		else \
-			echo "IPThing server is not running"; \
-		fi \
-	fi
+	@./scripts/check-status.sh
 
 logs: ## Tail the server logs
 	@if [ -f ipthing.log ]; then \

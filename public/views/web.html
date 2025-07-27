@@ -36,6 +36,7 @@
 <body>
 <table>
     <tbody>
+    <!-- IP Information Section -->
     <tr>
         <td>IP Address</td>
         <td>{{ .IPAddr }}</td>
@@ -52,23 +53,38 @@
         <td>Organization</td>
         <td>{{ .Org }}</td>
     </tr>
+    
+    <!-- Core Request Information -->
     <tr>
-        <td>Visitor</td>
-        <td>{{ .Visitor }}</td>
+        <td>Method</td>
+        <td>{{ .Method }}</td>
     </tr>
     <tr>
-        <td>X-Forwarded-For</td>
-        <td>{{ .XFF }}</td>
+        <td>Request URI</td>
+        <td>{{ .RequestURI }}</td>
     </tr>
-
     <tr>
-        <td>X-Real-IP</td>
-        <td>{{ .XRI }}</td>
+        <td>Protocol</td>
+        <td>{{ .Proto }}</td>
+    </tr>
+    <tr>
+        <td>Host</td>
+        <td>{{ .Host }}</td>
+    </tr>
+    <tr>
+        <td>Scheme</td>
+        <td>{{ .Scheme }}</td>
+    </tr>
+    <tr>
+        <td>Content Length</td>
+        <td>{{ .ContentLength }}</td>
     </tr>
     <tr>
         <td>User-Agent</td>
         <td>{{ .UserAgent }}</td>
     </tr>
+
+    <!-- Core Headers -->
     <tr>
         <td>Accept</td>
         <td>{{ .Accept }}</td>
@@ -82,28 +98,34 @@
         <td>{{ .AcceptLanguage }}</td>
     </tr>
     <tr>
-        <td>Host</td>
-        <td>{{ .Host }}</td>
+        <td>Referer</td>
+        <td>{{ .Referer }}</td>
     </tr>
     <tr>
-        <td>Protocol</td>
-        <td>{{ .Proto }}</td>
+        <td>Content-Type</td>
+        <td>{{ .MIMEType }}</td>
+    </tr>
+
+    <!-- Additional Headers -->
+    <tr>
+        <td>X-Forwarded-For</td>
+        <td>{{ .XFF }}</td>
     </tr>
     <tr>
-        <td>Scheme</td>
-        <td>{{ .Scheme }}</td>
+        <td>X-Real-IP</td>
+        <td>{{ .XRI }}</td>
+    </tr>
+    <tr>
+        <td>DNT</td>
+        <td>{{ .DNT }}</td>
     </tr>
     <tr>
         <td>Remote Address</td>
         <td>{{ .RemoteAddr }}</td>
     </tr>
     <tr>
-        <td>Request URI</td>
-        <td>{{ .RequestURI }}</td>
-    </tr>
-    <tr>
-        <td>Content Length</td>
-        <td>{{ .ContentLength }}</td>
+        <td>Visitor</td>
+        <td>{{ .Visitor }}</td>
     </tr>
     {{ if .TLSVersion }}
     <tr>
