@@ -205,11 +205,13 @@ func (app *Application) rootHandler(c echo.Context) error {
 func (app *Application) startServers() {
 	// Set default ports if not configured
 	httpPort := app.config.ListenPortHTTP
+	log.Printf("Config HTTP port: %d", app.config.ListenPortHTTP)
 	if httpPort <= 0 {
 		httpPort = DefaultHTTPPort
 	}
 
 	httpsPort := app.config.ListenPortHTTPS
+	log.Printf("Config HTTPS port: %d", app.config.ListenPortHTTPS)
 	if httpsPort <= 0 {
 		httpsPort = DefaultHTTPSPort
 	}

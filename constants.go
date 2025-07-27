@@ -18,7 +18,7 @@ const (
 
 // File paths and directories
 const (
-	AutoTLSCacheDir = "/var/www/.cache"
+	AutoTLSCacheDir = "/opt/ipthing/.cache"
 )
 
 // MIME types

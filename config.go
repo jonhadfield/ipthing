@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -26,9 +27,18 @@ type Config struct {
 
 // ReadConfig reads configuration from file or environment variable with fallbacks
 func ReadConfig(filePath string) (*Config, error) {
+	log.Printf("ReadConfig called with filePath: %s", filePath)
+	log.Printf("Environment check - IPTHING_HTTP_PORT: %s", os.Getenv("IPTHING_HTTP_PORT"))
+	
 	config, err := loadConfigFromSources(filePath)
 	if err != nil {
 		return nil, err
+	}
+
+	// If no config was loaded, use default config
+	if config == nil {
+		log.Println("No config loaded from sources, using default config")
+		config = GetDefaultConfig()
 	}
 
 	// Apply environment variable overrides
@@ -61,7 +71,10 @@ func loadConfigFromSources(filePath string) (*Config, error) {
 	if filePath != "" {
 		f, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+			// Don't return error if file doesn't exist, just return nil config
+			// This allows environment variables to still be used
+			log.Printf("Config file not found: %v", err)
+			return nil, nil
 		}
 
 		if err = json.Unmarshal(f, &config); err != nil {
@@ -81,6 +94,7 @@ func applyEnvironmentOverrides(config *Config) {
 
 	if dbType := os.Getenv("IPTHING_DB_TYPE"); dbType != "" {
 		config.DatabaseType = dbType
+		log.Printf("Applied IPTHING_DB_TYPE: %s", dbType)
 	}
 
 	if dbPath := os.Getenv("IPTHING_SQLITE_PATH"); dbPath != "" {
@@ -95,12 +109,33 @@ func applyEnvironmentOverrides(config *Config) {
 	if httpPort := os.Getenv("IPTHING_HTTP_PORT"); httpPort != "" {
 		if port, err := parseInt(httpPort); err == nil {
 			config.ListenPortHTTP = port
+			log.Printf("Applied IPTHING_HTTP_PORT: %d", port)
+		} else {
+			log.Printf("Failed to parse IPTHING_HTTP_PORT: %s, error: %v", httpPort, err)
 		}
 	}
 
 	if httpsPort := os.Getenv("IPTHING_HTTPS_PORT"); httpsPort != "" {
 		if port, err := parseInt(httpsPort); err == nil {
 			config.ListenPortHTTPS = port
+			log.Printf("Applied IPTHING_HTTPS_PORT: %d", port)
+		} else {
+			log.Printf("Failed to parse IPTHING_HTTPS_PORT: %s, error: %v", httpsPort, err)
+		}
+	}
+
+	// Host whitelist configuration
+	if hostWhitelist := os.Getenv("IPTHING_HOST_WHITELIST"); hostWhitelist != "" {
+		hosts := strings.Split(hostWhitelist, ",")
+		var cleanedHosts []string
+		for _, host := range hosts {
+			trimmed := strings.TrimSpace(host)
+			if trimmed != "" {
+				cleanedHosts = append(cleanedHosts, trimmed)
+			}
+		}
+		if len(cleanedHosts) > 0 {
+			config.HostWhitelist = cleanedHosts
 		}
 	}
 }
@@ -129,6 +164,9 @@ func logConfigSettings(config *Config) {
 
 	log.Printf("HTTP port: %d", config.ListenPortHTTP)
 	log.Printf("HTTPS port: %d", config.ListenPortHTTPS)
+	if len(config.HostWhitelist) > 0 {
+		log.Printf("Host whitelist: %v", config.HostWhitelist)
+	}
 }
 
 // GetDefaultConfig returns a default configuration
