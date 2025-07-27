@@ -77,7 +77,7 @@ func (rp *RequestProcessor) extractClientIP(c echo.Context) (string, error) {
 	req := c.Request()
 
 	// Try Cloudflare connecting IP first
-	clientIP := req.Header.Get("Cf-Connecting-Ip")
+	clientIP := req.Header.Get(HeaderCloudflareConnectingIP)
 	if clientIP != "" {
 		return clientIP, nil
 	}
@@ -115,7 +115,7 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 	// Capture request body (first 1KB for debugging)
 	var bodyContent string
 	if req.Body != nil && req.ContentLength > 0 {
-		bodyBytes := make([]byte, 1024) // Read up to 1KB
+		bodyBytes := make([]byte, RequestBodyReadLimit) // Read up to 1KB
 		n, _ := req.Body.Read(bodyBytes)
 		if n > 0 {
 			bodyContent = string(bodyBytes[:n])
@@ -167,7 +167,7 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 	}
 
 	// Check for duplicates within the last 5 minutes
-	isDuplicate, err := rp.db.IsDuplicateRequest(fingerprint, 5*time.Minute)
+	isDuplicate, err := rp.db.IsDuplicateRequest(fingerprint, DuplicateRequestWindow)
 	if err != nil {
 		rp.logger.Errorf("Failed to check for duplicate request: %v", err)
 		return
@@ -200,7 +200,7 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 
 // parseXForwardedFor extracts the first untrusted IP from X-Forwarded-For header
 func parseXForwardedFor(req *http.Request) (string, error) {
-	xff := req.Header.Get("X-Forwarded-For")
+	xff := req.Header.Get(HeaderXForwardedFor)
 	if xff == "" {
 		return "", nil
 	}

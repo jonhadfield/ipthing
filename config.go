@@ -134,8 +134,8 @@ func logConfigSettings(config *Config) {
 // GetDefaultConfig returns a default configuration
 func GetDefaultConfig() *Config {
 	return &Config{
-		ListenPortHTTP:  8080,
-		ListenPortHTTPS: 443,
+		ListenPortHTTP:  DefaultHTTPPort,
+		ListenPortHTTPS: DefaultHTTPSPort,
 	}
 }
 

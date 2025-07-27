@@ -55,8 +55,8 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"Method":         req.Method,
 		"MIMEType":       req.Header.Get("Content-Type"),
 		"Charset":        req.Header.Get("Charset"),
-		"XFF":            req.Header.Get("X-Forwarded-For"),
-		"XRI":            req.Header.Get("X-Real-IP"),
+		"XFF":            req.Header.Get(HeaderXForwardedFor),
+		"XRI":            req.Header.Get(HeaderXRealIP),
 		// New fields
 		"Proto":         httpReq.Proto,
 		"ContentLength": httpReq.ContentLength,
@@ -68,6 +68,8 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"City":    "",
 		"Org":     "",
 		"Visitor": "",
+		// CSS constants
+		"WebTableWidth": WebTableWidth,
 	}
 
 	// Add TLS information if available
@@ -79,10 +81,10 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 	}
 
 	// Add Cloudflare specific headers
-	if cfCountry := req.Header.Get("Cf-IPcountry"); cfCountry != "" {
+	if cfCountry := req.Header.Get(HeaderCloudflareiPCountry); cfCountry != "" {
 		data["Country"] = cfCountry
 	}
-	if cfVisitor := req.Header.Get("Cf-Visitor"); cfVisitor != "" {
+	if cfVisitor := req.Header.Get(HeaderCloudflareVisitor); cfVisitor != "" {
 		data["Visitor"] = cfVisitor
 	}
 

@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
@@ -103,7 +102,7 @@ func (app *Application) setupServer() *echo.Echo {
 	e.Use(app.databaseMiddleware())
 
 	// Configure TLS
-	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+	e.AutoTLSManager.Cache = autocert.DirCache(AutoTLSCacheDir)
 
 	// Set template renderer
 	e.Renderer = app.template
@@ -154,14 +153,14 @@ func (app *Application) serveEmbeddedAsset(assetFS fs.FS, filename string) echo.
 // getContentType returns the appropriate content type for a file
 func getContentType(filename string) string {
 	switch {
-	case strings.HasSuffix(filename, ".ico"):
-		return "image/x-icon"
-	case strings.HasSuffix(filename, ".png"):
-		return "image/png"
-	case strings.HasSuffix(filename, ".webmanifest"):
-		return "application/manifest+json"
+	case strings.HasSuffix(filename, ExtensionICO):
+		return MimeTypeIcon
+	case strings.HasSuffix(filename, ExtensionPNG):
+		return MimeTypePNG
+	case strings.HasSuffix(filename, ExtensionWebmanifest):
+		return MimeTypeManifest
 	default:
-		return "application/octet-stream"
+		return MimeTypeOctetStream
 	}
 }
 
@@ -179,12 +178,12 @@ func (app *Application) startServers() {
 	// Set default ports if not configured
 	httpPort := app.config.ListenPortHTTP
 	if httpPort <= 0 {
-		httpPort = 8080
+		httpPort = DefaultHTTPPort
 	}
 
 	httpsPort := app.config.ListenPortHTTPS
 	if httpsPort <= 0 {
-		httpsPort = 443
+		httpsPort = DefaultHTTPSPort
 	}
 
 	// Create a slice to track servers for shutdown
@@ -214,7 +213,7 @@ func (app *Application) startServers() {
 	}
 
 	// Set up graceful shutdown
-	quit := make(chan os.Signal, 1)
+	quit := make(chan os.Signal, MaxSignalBufferSize)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	log.Printf("Servers started. Press Ctrl+C to stop.")
@@ -224,7 +223,7 @@ func (app *Application) startServers() {
 	log.Println("Shutting down servers...")
 
 	// Create a context with timeout for graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), GracefulShutdownTimeout)
 	defer cancel()
 
 	// Shutdown all servers
@@ -252,6 +251,6 @@ func (app *Application) startServers() {
 // startTLS starts the server with TLS/HTTPS support
 func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) error {
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
-	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+	e.AutoTLSManager.Cache = autocert.DirCache(AutoTLSCacheDir)
 	return e.StartAutoTLS(fmt.Sprintf(":%d", listenPort))
 }
