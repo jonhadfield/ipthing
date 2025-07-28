@@ -2,9 +2,9 @@ package main
 
 import (
 	"embed"
-	"text/template"
 	"io"
 	"io/fs"
+	"text/template"
 
 	"github.com/labstack/echo/v4"
 )
