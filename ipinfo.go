@@ -21,7 +21,11 @@ func fetchIPInfo(ip string) (*IPInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch IP info: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			err = fmt.Errorf("failed to close response body: %w", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("ipinfo API returned status %d", resp.StatusCode)

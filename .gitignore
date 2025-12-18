@@ -22,6 +22,9 @@ go.work
 
 # app specific
 config.json
+.env
+.env.local
+.env.*.local
 
 # Server runtime files
 ipthing.log
