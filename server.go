@@ -148,12 +148,12 @@ func (app *Application) setupServer() *echo.Echo {
 
 	// Configure middleware
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus:   true,
-		LogURI:      true,
-		LogError:    true,
-		LogMethod:   true,
-		LogRemoteIP: true,
-		LogLatency:  true,
+		LogStatus:    true,
+		LogURI:       true,
+		LogError:     true,
+		LogMethod:    true,
+		LogRemoteIP:  true,
+		LogLatency:   true,
 		LogUserAgent: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			// Log detailed request information

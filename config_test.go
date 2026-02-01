@@ -31,7 +31,7 @@ func TestReadConfig_FromFile(t *testing.T) {
 		"databasePath": "/tmp/test.db"
 	}`
 
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o644)
 	require.NoError(t, err)
 
 	// Read config
@@ -72,7 +72,7 @@ func TestReadConfig_EnvironmentOverrides(t *testing.T) {
 		"databaseType": "sqlite"
 	}`
 
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o644)
 	require.NoError(t, err)
 
 	// Set environment overrides
@@ -100,7 +100,7 @@ func TestReadConfig_LegacyPortHandling(t *testing.T) {
 		"listenPort": 1323
 	}`
 
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o644)
 	require.NoError(t, err)
 
 	// Read config
@@ -120,7 +120,7 @@ func TestReadConfig_LegacyDatabaseURL(t *testing.T) {
 
 	configContent := `{}`
 
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o644)
 	require.NoError(t, err)
 
 	// Set legacy DATABASE_URL environment variable
@@ -138,8 +138,8 @@ func TestReadConfig_LegacyDatabaseURL(t *testing.T) {
 
 func TestGetContentType(t *testing.T) {
 	tests := []struct {
-		filename    string
-		expected    string
+		filename string
+		expected string
 	}{
 		{"favicon.ico", "image/x-icon"},
 		{"favicon-16x16.png", "image/png"},

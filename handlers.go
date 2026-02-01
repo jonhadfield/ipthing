@@ -97,6 +97,23 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		if ipInfo.Org != "" {
 			data["Org"] = ipInfo.Org
 		}
+		// Add additional geolocation fields
+		if ipInfo.Region != "" {
+			data["Region"] = ipInfo.Region
+		}
+		if ipInfo.Postal != "" {
+			data["Postal"] = ipInfo.Postal
+		}
+		if ipInfo.Timezone != "" {
+			data["Timezone"] = ipInfo.Timezone
+		}
+		if ipInfo.Loc != "" {
+			data["Loc"] = ipInfo.Loc
+		}
+		if ipInfo.Hostname != "" {
+			data["Hostname"] = ipInfo.Hostname
+		}
+		data["Bogon"] = ipInfo.Bogon
 	}
 
 	return data

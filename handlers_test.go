@@ -71,20 +71,20 @@ func TestBuildResponseData_WithTLS(t *testing.T) {
 	// Setup
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.TLS = &tls.ConnectionState{
-		Version:           tls.VersionTLS13,
-		CipherSuite:       tls.TLS_AES_128_GCM_SHA256,
-		ServerName:        "example.com",
+		Version:            tls.VersionTLS13,
+		CipherSuite:        tls.TLS_AES_128_GCM_SHA256,
+		ServerName:         "example.com",
 		NegotiatedProtocol: "h2",
 	}
 
 	httpReq := &HTTPRequest{
-		IP:                     "192.168.1.1",
-		Method:                 "GET",
-		Path:                   "/",
-		TLSVersion:             tls.VersionTLS13,
-		TLSCipherSuite:         tls.TLS_AES_128_GCM_SHA256,
-		TLSServerName:          "example.com",
-		TLSNegotiatedProtocol:  "h2",
+		IP:                    "192.168.1.1",
+		Method:                "GET",
+		Path:                  "/",
+		TLSVersion:            tls.VersionTLS13,
+		TLSCipherSuite:        tls.TLS_AES_128_GCM_SHA256,
+		TLSServerName:         "example.com",
+		TLSNegotiatedProtocol: "h2",
 	}
 
 	db := &NoOpDB{}

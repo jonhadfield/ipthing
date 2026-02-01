@@ -40,14 +40,50 @@
         <td>IP Address</td>
         <td>{{ .IPAddr }}</td>
     </tr>
+    {{ if .Hostname }}
+    <tr>
+        <td>Hostname</td>
+        <td>{{ .Hostname }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Bogon }}
+    <tr>
+        <td>Bogon IP</td>
+        <td>{{ .Bogon }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>Country</td>
         <td>{{ .Country }}</td>
     </tr>
+    {{ if .Region }}
+    <tr>
+        <td>Region</td>
+        <td>{{ .Region }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>City</td>
         <td>{{ .City }}</td>
     </tr>
+    {{ if .Postal }}
+    <tr>
+        <td>Postal Code</td>
+        <td>{{ .Postal }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Loc }}
+    <tr>
+        <td>Coordinates</td>
+        <td>{{ .Loc }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Timezone }}
+    <tr>
+        <td>Timezone</td>
+        <td>{{ .Timezone }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>Organization</td>
         <td>{{ .Org }}</td>
@@ -65,6 +101,28 @@
         <td>X-Real-IP</td>
         <td>{{ .XRI }}</td>
     </tr>
+    <tr>
+        <td>Method</td>
+        <td>{{ .Method }}</td>
+    </tr>
+    {{ if .Referer }}
+    <tr>
+        <td>Referer</td>
+        <td>{{ .Referer }}</td>
+    </tr>
+    {{ end }}
+    {{ if .MIMEType }}
+    <tr>
+        <td>Content-Type</td>
+        <td>{{ .MIMEType }}</td>
+    </tr>
+    {{ end }}
+    {{ if .DNT }}
+    <tr>
+        <td>DNT (Do Not Track)</td>
+        <td>{{ .DNT }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>User-Agent</td>
         <td>{{ .UserAgent }}</td>
