@@ -85,6 +85,91 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 	if cfVisitor := req.Header.Get("Cf-Visitor"); cfVisitor != "" {
 		data["Visitor"] = cfVisitor
 	}
+	if cfRay := req.Header.Get("CF-Ray"); cfRay != "" {
+		data["CFRay"] = cfRay
+	}
+	if cfRequestID := req.Header.Get("CF-Request-ID"); cfRequestID != "" {
+		data["CFRequestID"] = cfRequestID
+	}
+
+	// Add security headers (Sec-Fetch-*)
+	if secFetchSite := req.Header.Get("Sec-Fetch-Site"); secFetchSite != "" {
+		data["SecFetchSite"] = secFetchSite
+	}
+	if secFetchMode := req.Header.Get("Sec-Fetch-Mode"); secFetchMode != "" {
+		data["SecFetchMode"] = secFetchMode
+	}
+	if secFetchUser := req.Header.Get("Sec-Fetch-User"); secFetchUser != "" {
+		data["SecFetchUser"] = secFetchUser
+	}
+	if secFetchDest := req.Header.Get("Sec-Fetch-Dest"); secFetchDest != "" {
+		data["SecFetchDest"] = secFetchDest
+	}
+
+	// Add client hints
+	if secCHUA := req.Header.Get("Sec-CH-UA"); secCHUA != "" {
+		data["SecCHUA"] = secCHUA
+	}
+	if secCHUAMobile := req.Header.Get("Sec-CH-UA-Mobile"); secCHUAMobile != "" {
+		data["SecCHUAMobile"] = secCHUAMobile
+	}
+	if secCHUAPlatform := req.Header.Get("Sec-CH-UA-Platform"); secCHUAPlatform != "" {
+		data["SecCHUAPlatform"] = secCHUAPlatform
+	}
+	if secCHUAArch := req.Header.Get("Sec-CH-UA-Arch"); secCHUAArch != "" {
+		data["SecCHUAArch"] = secCHUAArch
+	}
+	if deviceMemory := req.Header.Get("Device-Memory"); deviceMemory != "" {
+		data["DeviceMemory"] = deviceMemory
+	}
+	if viewportWidth := req.Header.Get("Viewport-Width"); viewportWidth != "" {
+		data["ViewportWidth"] = viewportWidth
+	}
+
+	// Add additional security/privacy headers
+	if upgradeInsecure := req.Header.Get("Upgrade-Insecure-Requests"); upgradeInsecure != "" {
+		data["UpgradeInsecureRequests"] = upgradeInsecure
+	}
+	if saveData := req.Header.Get("Save-Data"); saveData != "" {
+		data["SaveData"] = saveData
+	}
+
+	// Add proxy/forwarding headers
+	if via := req.Header.Get("Via"); via != "" {
+		data["Via"] = via
+	}
+	if forwarded := req.Header.Get("Forwarded"); forwarded != "" {
+		data["Forwarded"] = forwarded
+	}
+	if trueClientIP := req.Header.Get("True-Client-IP"); trueClientIP != "" {
+		data["TrueClientIP"] = trueClientIP
+	}
+
+	// Add connection headers
+	if connection := req.Header.Get("Connection"); connection != "" {
+		data["Connection"] = connection
+	}
+	if cacheControl := req.Header.Get("Cache-Control"); cacheControl != "" {
+		data["CacheControl"] = cacheControl
+	}
+
+	// Add request metadata
+	data["Timestamp"] = httpReq.Timestamp.Format("2006-01-02 15:04:05 MST")
+
+	// Add cookie presence (boolean for privacy)
+	if cookie := req.Header.Get("Cookie"); cookie != "" {
+		data["HasCookies"] = true
+	} else {
+		data["HasCookies"] = false
+	}
+
+	// Parse and add query parameters
+	if httpReq.QueryParams != "" && httpReq.QueryParams != "{}" {
+		var queryParams map[string][]string
+		if err := json.Unmarshal([]byte(httpReq.QueryParams), &queryParams); err == nil {
+			data["QueryParams"] = queryParams
+		}
+	}
 
 	// Override with IP info from geolocation service if available
 	if ipInfo != nil {

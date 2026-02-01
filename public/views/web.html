@@ -101,6 +101,12 @@
         <td>X-Real-IP</td>
         <td>{{ .XRI }}</td>
     </tr>
+    {{ if .TrueClientIP }}
+    <tr>
+        <td>True-Client-IP</td>
+        <td>{{ .TrueClientIP }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>Method</td>
         <td>{{ .Method }}</td>
@@ -123,6 +129,42 @@
         <td>{{ .DNT }}</td>
     </tr>
     {{ end }}
+    {{ if .UpgradeInsecureRequests }}
+    <tr>
+        <td>Upgrade-Insecure-Requests</td>
+        <td>{{ .UpgradeInsecureRequests }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SaveData }}
+    <tr>
+        <td>Save-Data</td>
+        <td>{{ .SaveData }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecFetchSite }}
+    <tr>
+        <td>Sec-Fetch-Site</td>
+        <td>{{ .SecFetchSite }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecFetchMode }}
+    <tr>
+        <td>Sec-Fetch-Mode</td>
+        <td>{{ .SecFetchMode }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecFetchUser }}
+    <tr>
+        <td>Sec-Fetch-User</td>
+        <td>{{ .SecFetchUser }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecFetchDest }}
+    <tr>
+        <td>Sec-Fetch-Dest</td>
+        <td>{{ .SecFetchDest }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>User-Agent</td>
         <td>{{ .UserAgent }}</td>
@@ -139,6 +181,42 @@
         <td>Accept-Language</td>
         <td>{{ .AcceptLanguage }}</td>
     </tr>
+    {{ if .SecCHUA }}
+    <tr>
+        <td>Sec-CH-UA</td>
+        <td>{{ .SecCHUA }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHUAMobile }}
+    <tr>
+        <td>Sec-CH-UA-Mobile</td>
+        <td>{{ .SecCHUAMobile }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHUAPlatform }}
+    <tr>
+        <td>Sec-CH-UA-Platform</td>
+        <td>{{ .SecCHUAPlatform }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHUAArch }}
+    <tr>
+        <td>Sec-CH-UA-Arch</td>
+        <td>{{ .SecCHUAArch }}</td>
+    </tr>
+    {{ end }}
+    {{ if .DeviceMemory }}
+    <tr>
+        <td>Device Memory (GB)</td>
+        <td>{{ .DeviceMemory }}</td>
+    </tr>
+    {{ end }}
+    {{ if .ViewportWidth }}
+    <tr>
+        <td>Viewport Width</td>
+        <td>{{ .ViewportWidth }}</td>
+    </tr>
+    {{ end }}
     <tr>
         <td>Host</td>
         <td>{{ .Host }}</td>
@@ -163,6 +241,60 @@
         <td>Content Length</td>
         <td>{{ .ContentLength }}</td>
     </tr>
+    {{ if .Connection }}
+    <tr>
+        <td>Connection</td>
+        <td>{{ .Connection }}</td>
+    </tr>
+    {{ end }}
+    {{ if .CacheControl }}
+    <tr>
+        <td>Cache-Control</td>
+        <td>{{ .CacheControl }}</td>
+    </tr>
+    {{ end }}
+    <tr>
+        <td>Has Cookies</td>
+        <td>{{ .HasCookies }}</td>
+    </tr>
+    {{ if .Via }}
+    <tr>
+        <td>Via (Proxy Chain)</td>
+        <td>{{ .Via }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Forwarded }}
+    <tr>
+        <td>Forwarded</td>
+        <td>{{ .Forwarded }}</td>
+    </tr>
+    {{ end }}
+    {{ if .CFRay }}
+    <tr>
+        <td>CF-Ray</td>
+        <td>{{ .CFRay }}</td>
+    </tr>
+    {{ end }}
+    {{ if .CFRequestID }}
+    <tr>
+        <td>CF-Request-ID</td>
+        <td>{{ .CFRequestID }}</td>
+    </tr>
+    {{ end }}
+    <tr>
+        <td>Request Timestamp</td>
+        <td>{{ .Timestamp }}</td>
+    </tr>
+    {{ if .QueryParams }}
+    <tr>
+        <td>Query Parameters</td>
+        <td>
+            {{ range $key, $values := .QueryParams }}
+                {{ $key }}: {{ range $values }}{{ . }} {{ end }}<br>
+            {{ end }}
+        </td>
+    </tr>
+    {{ end }}
     {{ if .TLSVersion }}
     <tr>
         <td>TLS Version</td>
