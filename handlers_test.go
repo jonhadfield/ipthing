@@ -249,6 +249,7 @@ func TestRootAcceptsNonGETMethods(t *testing.T) {
 		http.MethodTrace,
 		echo.PROPFIND,
 		echo.REPORT,
+		"QUERY", // RFC 10008; registered in extraRootMethods
 		"COPY",
 		"MOVE",
 		"MKCOL",

@@ -199,8 +199,9 @@ func (app *Application) setupServer() *echo.Echo {
 	return e
 }
 
-// extraRootMethods are common scanner/WebDAV verbs beyond Echo's Any() set.
+// extraRootMethods are verbs beyond Echo's Any() set (WebDAV, caches, RFC 10008 QUERY, etc.).
 var extraRootMethods = []string{
+	"QUERY", // RFC 10008
 	"COPY", "MOVE", "MKCOL", "LOCK", "UNLOCK", "PROPPATCH", "SEARCH", "PURGE",
 	"LINK", "UNLINK", "VIEW", "CHECKOUT", "CHECKIN", "MERGE", "ACL", "ORDERPATCH",
 	"UPDATE", "VERSION-CONTROL", "BASELINE-CONTROL", "LABEL", "MKACTIVITY",
