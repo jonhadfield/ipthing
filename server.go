@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"log/syslog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -45,7 +44,7 @@ type Application struct {
 	dbDefined    bool
 	template     *EmbeddedRenderer
 	handler      *Handler
-	syslogWriter *syslog.Writer
+	syslogWriter syslogSink
 }
 
 // initializeApplication sets up all application dependencies
