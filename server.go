@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -16,6 +17,8 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/quic-go/quic-go/http3"
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -283,7 +286,7 @@ func (app *Application) rootHandler(c echo.Context) error {
 	return app.handler.HandleRoot(c)
 }
 
-// startServers starts both HTTP and HTTPS servers based on configuration
+// startServers starts HTTP, HTTPS (TCP), and HTTP/3 (QUIC) servers based on configuration
 func (app *Application) startServers() {
 	// Set default ports if not configured
 	httpPort := app.config.ListenPortHTTP
@@ -310,15 +313,29 @@ func (app *Application) startServers() {
 	}()
 	log.Printf("HTTP server started successfully on port %d", httpPort)
 
-	// Start HTTPS server if TLS is enabled
+	// Start HTTPS (HTTP/1.1 + HTTP/2) and HTTP/3 if TLS is enabled
 	var httpsServer *echo.Echo
+	var h3Server *http3.Server
 	if app.config.ListenPortHTTPS != 0 {
 		httpsServer = app.setupServer()
+		configureAutoTLS(httpsServer, app.config.HostWhitelist)
+		h3Server = newHTTP3Server(httpsServer, httpsPort)
+		httpsServer.Use(altSvcMiddleware(h3Server))
+
+		addr := fmt.Sprintf(":%d", httpsPort)
 		go func() {
-			log.Printf("Starting HTTPS server on port %d", httpsPort)
-			startTLS(httpsServer, app.config.HostWhitelist, httpsPort)
+			log.Printf("Starting HTTPS server (HTTP/1.1+HTTP/2) on port %d", httpsPort)
+			if err := httpsServer.StartAutoTLS(addr); err != nil && err != http.ErrServerClosed {
+				log.Printf("HTTPS server error: %v", err)
+			}
 		}()
-		log.Printf("HTTPS server started successfully on port %d", httpsPort)
+		go func() {
+			log.Printf("Starting HTTP/3 (QUIC) server on UDP port %d", httpsPort)
+			if err := h3Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Printf("HTTP/3 server error: %v", err)
+			}
+		}()
+		log.Printf("HTTPS/HTTP3 servers started successfully on port %d", httpsPort)
 	}
 
 	// Wait for interrupt signal
@@ -348,12 +365,44 @@ func (app *Application) startServers() {
 		}
 	}
 
+	if h3Server != nil {
+		log.Printf("Shutting down HTTP/3 server")
+		if err := h3Server.Close(); err != nil {
+			log.Printf("HTTP/3 server shutdown error: %v", err)
+		} else {
+			log.Printf("HTTP/3 server shut down successfully")
+		}
+	}
+
 	log.Printf("All servers shut down successfully")
 }
 
-// startTLS starts the server with TLS/HTTPS support
-func startTLS(e *echo.Echo, hostWhitelist []string, listenPort int) {
+func configureAutoTLS(e *echo.Echo, hostWhitelist []string) {
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
-	e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", listenPort)))
+}
+
+func newHTTP3Server(e *echo.Echo, listenPort int) *http3.Server {
+	tlsConf := &tls.Config{
+		GetCertificate: e.AutoTLSManager.GetCertificate,
+		NextProtos:     []string{acme.ALPNProto, http3.NextProtoH3},
+		MinVersion:     tls.VersionTLS13,
+	}
+	return &http3.Server{
+		Handler:   e,
+		Addr:      fmt.Sprintf(":%d", listenPort),
+		Port:      listenPort,
+		TLSConfig: http3.ConfigureTLSConfig(tlsConf),
+	}
+}
+
+func altSvcMiddleware(h3 *http3.Server) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if h3 != nil {
+				_ = h3.SetQUICHeaders(c.Response().Header())
+			}
+			return next(c)
+		}
+	}
 }
