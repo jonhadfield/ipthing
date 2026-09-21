@@ -12,4 +12,4 @@ When changing IP extraction, middleware, or Echo `IPExtractor`, preserve direct-
 
 ## Protocols
 
-HTTPS serves HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on **UDP 443** and is advertised via `Alt-Svc`. Ensure the host firewall allows UDP/443.
+HTTPS serves HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on **UDP 443** and is advertised via `Alt-Svc`. Allow UDP/443 on both the host firewall and any DigitalOcean Cloud Firewall (or equivalent) in front of the droplet — host rules alone are not enough if the cloud firewall drops UDP.
