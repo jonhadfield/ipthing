@@ -12,8 +12,14 @@ import (
 
 func TestRequestProcessor(t *testing.T) {
 	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.50:54321"
+	// Spoofable headers must not override the TCP peer IP.
 	req.Header.Set("Cf-Connecting-Ip", "192.168.1.1")
+	req.Header.Set("X-Forwarded-For", "198.51.100.1")
+	req.Header.Set("X-Real-IP", "198.51.100.2")
 	req.Header.Set("Cf-IPcountry", "US")
 	req.Header.Set("Cf-Visitor", "Visitor")
 	req.Header.Set("Accept", "application/json")
@@ -24,60 +30,35 @@ func TestRequestProcessor(t *testing.T) {
 	req.Header.Set("Referer", "http://localhost")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Charset", "UTF-8")
-	req.Header.Set("X-Forwarded-For", "192.168.1.1")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	// Test RequestProcessor with NoOp database
 	db := &NoOpDB{}
 	rp := NewRequestProcessor(db, false, e.Logger)
 
 	httpReq, _, err := rp.ProcessRequest(c)
 	require.NoError(t, err)
 	require.NotNil(t, httpReq)
-	assert.Equal(t, "192.168.1.1", httpReq.IP)
+	assert.Equal(t, "203.0.113.50", httpReq.IP)
 	assert.Equal(t, "GET", httpReq.Method)
 	assert.Equal(t, "/", httpReq.Path)
 	assert.Equal(t, "http://localhost", httpReq.Referer)
 }
 
-func TestParseXForwardedFor(t *testing.T) {
+func TestExtractClientIPIgnoresForwardingHeaders(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.RemoteAddr = "127.0.0.1:8080"
-	req.Header.Add("X-Forwarded-For", "203.0.113.199, 192.168.1.100")
-	addr, err := parseXForwardedFor(req)
-	require.NoError(t, err)
-	require.NotEmpty(t, addr)
-	require.Equal(t, "203.0.113.199", addr)
-}
+	req.RemoteAddr = "203.0.113.99:12345"
+	req.Header.Set("Cf-Connecting-Ip", "1.2.3.4")
+	req.Header.Set("X-Forwarded-For", "5.6.7.8, 9.9.9.9")
+	req.Header.Set("X-Real-IP", "10.0.0.1")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
 
-func TestStripTrustedFromXFF(t *testing.T) {
-	in := []struct {
-		xff        string
-		trustedPos int
-		expected   string
-	}{
-		{
-			xff:        "1.1.1.1,2.2.2.2,3.3.3.3",
-			trustedPos: 1,
-			expected:   "1.1.1.1,2.2.2.2",
-		},
-		{
-			xff:        "1.1.1.1,6.6.6.6,192.168.4.50",
-			trustedPos: 1,
-			expected:   "1.1.1.1,6.6.6.6",
-		},
-		{
-			xff:        "1.1.1.1,6.6.6.6:443,192.168.4.50",
-			trustedPos: 2,
-			expected:   "1.1.1.1",
-		},
-	}
-
-	for x := range in {
-		actual := stripXFFTrustedProxies(in[x].xff, in[x].trustedPos)
-		require.Equal(t, in[x].expected, actual)
-	}
+	rp := NewRequestProcessor(&NoOpDB{}, false, e.Logger)
+	assert.Equal(t, "203.0.113.99", rp.extractClientIP(c))
 }
 
 func TestIsWebBrowser(t *testing.T) {

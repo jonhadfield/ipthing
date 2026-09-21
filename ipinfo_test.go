@@ -42,32 +42,3 @@ func TestShouldUpdateIPInfo(t *testing.T) {
 		})
 	}
 }
-
-func TestStripPrivateIPs(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{
-			input:    "203.0.113.1,192.168.1.1,::1",
-			expected: "203.0.113.1,192.168.1.1",
-		},
-		{
-			input:    "203.0.113.1",
-			expected: "203.0.113.1",
-		},
-		{
-			input:    "::1",
-			expected: "",
-		},
-		{
-			input:    "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		result := stripPrivateIPs(tt.input)
-		assert.Equal(t, tt.expected, result, "Input %s should return %s", tt.input, tt.expected)
-	}
-}

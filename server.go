@@ -140,6 +140,9 @@ func (app *Application) cleanup() {
 func (app *Application) setupServer() *echo.Echo {
 	e := echo.New()
 
+	// Direct-facing deployment: trust the TCP peer only (see AGENTS.md).
+	e.IPExtractor = echo.ExtractIPDirect()
+
 	// Configure Echo logger to use syslog
 	configureEchoLogger(e, app.syslogWriter)
 

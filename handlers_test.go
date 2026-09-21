@@ -15,7 +15,10 @@ import (
 func TestHandleRoot_BrowserResponse(t *testing.T) {
 	// Setup
 	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.10:12345"
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -41,9 +44,14 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 func TestHandleRoot_JSONResponse(t *testing.T) {
 	// Setup
 	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.50:54321"
 	req.Header.Set("User-Agent", "curl/7.68.0")
-	req.Header.Set("Cf-Connecting-Ip", "203.0.113.50")
+	// Spoofable headers must not become IPAddr.
+	req.Header.Set("Cf-Connecting-Ip", "198.51.100.1")
+	req.Header.Set("X-Forwarded-For", "198.51.100.2")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -65,6 +73,7 @@ func TestHandleRoot_JSONResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "203.0.113.50", responseData["IPAddr"])
 	assert.Equal(t, "curl/7.68.0", responseData["UserAgent"])
+	assert.Equal(t, "198.51.100.2", responseData["XFF"])
 }
 
 func TestBuildResponseData_WithTLS(t *testing.T) {

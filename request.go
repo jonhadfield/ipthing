@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -30,15 +29,13 @@ func NewRequestProcessor(db Database, dbDefined bool, logger echo.Logger) *Reque
 func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInfo, error) {
 	req := c.Request()
 
-	// Extract client IP using multiple methods
-	clientIP, err := rp.extractClientIP(c)
-	if err != nil {
-		return nil, nil, err
-	}
+	// Extract client IP from the TCP peer (no proxy headers)
+	clientIP := rp.extractClientIP(c)
 
 	// Fetch IP geolocation info
 	var ipInfo *IPInfo
 	if clientIP != "" {
+		var err error
 		ipInfo, err = getOrFetchIPInfo(rp.db, clientIP)
 		if err != nil {
 			rp.logger.Errorf("Failed to get IP info: %v", err)
@@ -58,28 +55,10 @@ func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInf
 	return httpReq, ipInfo, nil
 }
 
-// extractClientIP extracts the client IP using multiple methods
-func (rp *RequestProcessor) extractClientIP(c echo.Context) (string, error) {
-	req := c.Request()
-
-	// Try Cloudflare connecting IP first
-	clientIP := req.Header.Get("Cf-Connecting-Ip")
-	if clientIP != "" {
-		return clientIP, nil
-	}
-
-	// Try X-Forwarded-For parsing
-	firstUntrusted, err := parseXForwardedFor(req)
-	if err != nil {
-		return "", err
-	}
-	if firstUntrusted != "" {
-		rp.logger.Info(firstUntrusted)
-		return firstUntrusted, nil
-	}
-
-	// Fall back to Echo's RealIP
-	return c.RealIP(), nil
+// extractClientIP returns the TCP peer IP via Echo's IPExtractor.
+// Spoofable forwarding headers are displayed in the response but never trusted here.
+func (rp *RequestProcessor) extractClientIP(c echo.Context) string {
+	return c.RealIP()
 }
 
 // buildHTTPRequest creates an HTTPRequest from the incoming request and client IP
@@ -182,49 +161,6 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 	if err := rp.db.SaveHTTPRequest(httpReq); err != nil {
 		rp.logger.Errorf("Failed to save HTTP request: %v", err)
 	}
-}
-
-// parseXForwardedFor extracts the first untrusted IP from X-Forwarded-For header
-func parseXForwardedFor(req *http.Request) (string, error) {
-	xff := req.Header.Get("X-Forwarded-For")
-	if xff == "" {
-		return "", nil
-	}
-
-	// Strip private IPs and extract the first untrusted IP
-	strippedXFF := stripXFFTrustedProxies(xff, 1)
-	return stripPrivateIPs(strippedXFF), nil
-}
-
-// stripPrivateIPs removes IPv6 addresses and private IPs from XFF string
-func stripPrivateIPs(xff string) string {
-	if xff == "" {
-		return ""
-	}
-
-	parts := strings.Split(xff, ",")
-	for i := len(parts) - 1; i >= 0; i-- {
-		if strings.Contains(parts[i], ":") {
-			return strings.Join(parts[:i], ",")
-		}
-	}
-
-	return xff
-}
-
-// stripXFFTrustedProxies removes trusted proxies from the end of XFF chain
-func stripXFFTrustedProxies(xff string, trustedPos int) string {
-	if xff == "" {
-		return ""
-	}
-
-	parts := strings.Split(xff, ",")
-	if len(parts) <= trustedPos {
-		return ""
-	}
-
-	realTrustedPos := len(parts) - trustedPos
-	return strings.Join(parts[:realTrustedPos], ",")
 }
 
 // IsWebBrowser determines if the request comes from a web browser based on User-Agent
