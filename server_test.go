@@ -184,6 +184,21 @@ func TestClacksOverheadMiddleware(t *testing.T) {
 	assert.Equal(t, "GNU Terry Pratchett", rec.Header().Get("X-Clacks-Overhead"))
 }
 
+func TestApplyServerTimeouts(t *testing.T) {
+	e := echo.New()
+	applyServerTimeouts(e)
+
+	assert.Equal(t, 5*time.Second, e.Server.ReadHeaderTimeout)
+	assert.Equal(t, 10*time.Second, e.Server.ReadTimeout)
+	assert.Equal(t, 15*time.Second, e.Server.WriteTimeout)
+	assert.Equal(t, 60*time.Second, e.Server.IdleTimeout)
+
+	assert.Equal(t, 5*time.Second, e.TLSServer.ReadHeaderTimeout)
+	assert.Equal(t, 10*time.Second, e.TLSServer.ReadTimeout)
+	assert.Equal(t, 15*time.Second, e.TLSServer.WriteTimeout)
+	assert.Equal(t, 60*time.Second, e.TLSServer.IdleTimeout)
+}
+
 func TestRateLimitMiddleware_PerIP(t *testing.T) {
 	e := echo.New()
 	e.IPExtractor = echo.ExtractIPDirect()

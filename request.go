@@ -36,7 +36,7 @@ func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInf
 	var ipInfo *IPInfo
 	if clientIP != "" {
 		var err error
-		ipInfo, err = getOrFetchIPInfo(rp.db, clientIP)
+		ipInfo, err = getOrFetchIPInfo(req.Context(), rp.db, clientIP)
 		if err != nil {
 			rp.logger.Errorf("Failed to get IP info: %v", err)
 		} else {

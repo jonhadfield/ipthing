@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,14 +11,19 @@ import (
 
 const ipInfoAPIURL = "https://ipinfo.io/%s/json"
 
-func fetchIPInfo(ip string) (*IPInfo, error) {
+func fetchIPInfo(ctx context.Context, ip string) (*IPInfo, error) {
 	url := fmt.Sprintf(ipInfoAPIURL, ip)
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create IP info request: %w", err)
 	}
 
-	resp, err := client.Get(url)
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch IP info: %w", err)
 	}
@@ -46,13 +52,13 @@ func fetchIPInfo(ip string) (*IPInfo, error) {
 	return &info, nil
 }
 
-func getOrFetchIPInfo(db Database, ip string) (*IPInfo, error) {
+func getOrFetchIPInfo(ctx context.Context, db Database, ip string) (*IPInfo, error) {
 	info, err := db.GetIPInfo(ip)
 	if err == nil && !shouldUpdateIPInfo(info.LastUpdate) {
 		return info, nil
 	}
 
-	newInfo, err := fetchIPInfo(ip)
+	newInfo, err := fetchIPInfo(ctx, ip)
 	if err != nil {
 		if info != nil {
 			return info, nil

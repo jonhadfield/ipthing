@@ -176,9 +176,13 @@ func (app *Application) setupServer() *echo.Echo {
 	}))
 	e.Use(middleware.Recover())
 	e.Use(rateLimitMiddleware())
+	// Bound handler work (e.g. ipinfo.io). Slow-client DoS is handled by server read timeouts.
+	e.Use(middleware.ContextTimeout(8 * time.Second))
 	e.Use(clacksOverheadMiddleware())
 	e.Use(securityHeadersMiddleware())
 	e.Use(app.databaseMiddleware())
+
+	applyServerTimeouts(e)
 
 	// Configure TLS
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
@@ -433,6 +437,17 @@ func (app *Application) startServers() {
 	log.Printf("All servers shut down successfully")
 }
 
+func applyServerTimeouts(e *echo.Echo) {
+	// Defend against slowloris / slow-body clients at the net/http layer.
+	// Echo's Timeout middleware is discouraged; these server timeouts are the right tool.
+	for _, s := range []*http.Server{e.Server, e.TLSServer} {
+		s.ReadHeaderTimeout = 5 * time.Second
+		s.ReadTimeout = 10 * time.Second
+		s.WriteTimeout = 15 * time.Second
+		s.IdleTimeout = 60 * time.Second
+	}
+}
+
 func configureAutoTLS(e *echo.Echo, hostWhitelist []string) {
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(hostWhitelist...)
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
@@ -445,10 +460,11 @@ func newHTTP3Server(e *echo.Echo, listenPort int) *http3.Server {
 		MinVersion:     tls.VersionTLS13,
 	}
 	return &http3.Server{
-		Handler:   e,
-		Addr:      fmt.Sprintf(":%d", listenPort),
-		Port:      listenPort,
-		TLSConfig: http3.ConfigureTLSConfig(tlsConf),
+		Handler:     e,
+		Addr:        fmt.Sprintf(":%d", listenPort),
+		Port:        listenPort,
+		TLSConfig:   http3.ConfigureTLSConfig(tlsConf),
+		IdleTimeout: 60 * time.Second,
 	}
 }
 
