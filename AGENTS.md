@@ -25,3 +25,7 @@ These limits exist to keep a public inspector from being an easy resource sink:
 - XSS: responses use `html/template` escaping plus a tight CSP (inline CSS only, no scripts)
 
 Privacy wording lives in `PRIVACY.md` and `/privacy`. Retention is indefinite by design; do not add automatic purge unless the operator asks.
+
+## Related project
+
+Aggregate traffic charts live at [stats.ipthing.net](https://stats.ipthing.net/), built from the read-only analysis repo [jonhadfield/ipthing-analysis](https://github.com/jonhadfield/ipthing-analysis). That project is separate from this Go service; keep DB credentials for it read-only.

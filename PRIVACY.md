@@ -21,6 +21,10 @@ Sensitive header values are redacted before persistence, including `Authorizatio
 
 Request and related records are retained indefinitely unless the operator deletes them manually.
 
+## Public aggregate stats
+
+A separate project publishes **aggregate-only** charts and narrative from this data at [stats.ipthing.net](https://stats.ipthing.net/). Source code: [jonhadfield/ipthing-analysis](https://github.com/jonhadfield/ipthing-analysis). That report does not publish raw headers or individual client identifiers.
+
 ## Legal basis / purpose
 
 Processing is for providing the inspection service you requested, securing and operating the service, and understanding usage patterns. If you are in the EEA/UK and have questions about personal data held about your visits, contact the service operator.

@@ -106,6 +106,8 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "Request bodies are not stored")
 	assert.Contains(t, body, "[redacted]")
 	assert.Contains(t, body, "retained indefinitely")
+	assert.Contains(t, body, "stats.ipthing.net")
+	assert.Contains(t, body, "jonhadfield/ipthing-analysis")
 }
 
 func TestHandleRoot_JSONResponse(t *testing.T) {
