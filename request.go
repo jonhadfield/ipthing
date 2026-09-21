@@ -9,6 +9,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// maxLoggedPathLen caps Path/RequestURI stored for analytics (scanner junk URLs).
+const maxLoggedPathLen = 512
+
+func truncateForLog(s string, limit int) string {
+	if limit <= 0 || len(s) <= limit {
+		return s
+	}
+	return s[:limit]
+}
+
 // RequestProcessor handles request processing and IP extraction
 type RequestProcessor struct {
 	db        Database
@@ -69,7 +79,7 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 	httpReq := &HTTPRequest{
 		IP:             clientIP,
 		Method:         req.Method,
-		Path:           req.URL.Path,
+		Path:           truncateForLog(req.URL.Path, maxLoggedPathLen),
 		UserAgent:      req.UserAgent(),
 		Referer:        req.Header.Get("Referer"),
 		Headers:        string(headersJSON),
@@ -78,7 +88,7 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 		Proto:          req.Proto,
 		ContentLength:  req.ContentLength,
 		RemoteAddr:     req.RemoteAddr,
-		RequestURI:     req.RequestURI,
+		RequestURI:     truncateForLog(req.RequestURI, maxLoggedPathLen),
 		Host:           req.Host,
 		ContentType:    req.Header.Get("Content-Type"),
 		HasCookies:     req.Header.Get("Cookie") != "",

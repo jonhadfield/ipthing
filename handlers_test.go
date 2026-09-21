@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -115,6 +116,42 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "jonhadfield/ipthing-analysis")
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "https://ipthing.net/privacy")
+}
+
+func TestNotFoundPathIsRecorded(t *testing.T) {
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+
+	db := &recordingDB{}
+	app := &Application{
+		handler:  NewHandler(NewRequestProcessor(db, true, nil)),
+		template: renderer,
+	}
+	e := app.setupServer()
+
+	req := httptest.NewRequest(http.MethodGet, "/.env", nil)
+	req.RemoteAddr = "203.0.113.77:9"
+	req.Header.Set("User-Agent", "scanner/1.0")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	require.Eventually(t, func() bool {
+		return db.getSaved() != nil
+	}, time.Second, 10*time.Millisecond)
+
+	saved := db.getSaved()
+	assert.Equal(t, "/.env", saved.Path)
+	assert.Equal(t, http.StatusNotFound, saved.StatusCode)
+	assert.Equal(t, "error", saved.ResponseFormat)
+	assert.Equal(t, "203.0.113.77", saved.IP)
+}
+
+func TestTruncateForLog(t *testing.T) {
+	assert.Equal(t, "short", truncateForLog("short", 10))
+	assert.Equal(t, "abcdefghij", truncateForLog("abcdefghijklmnopqrstuvwxyz", 10))
+	assert.Equal(t, "abc", truncateForLog("abc", 0))
 }
 
 func TestSEOStaticRoutes(t *testing.T) {

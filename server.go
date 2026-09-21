@@ -207,7 +207,8 @@ var extraRootMethods = []string{
 	"MKWORKSPACE", "BIND", "REBIND", "UNBIND",
 }
 
-// rootMethodFallback serves / for methods Echo would otherwise answer with 405.
+// rootMethodFallback serves / for methods Echo would otherwise answer with 405,
+// and records unmatched paths (404) for analytics without serving the inspector.
 func (app *Application) rootMethodFallback(e *echo.Echo) echo.HTTPErrorHandler {
 	return func(err error, c echo.Context) {
 		var he *echo.HTTPError
@@ -220,8 +221,24 @@ func (app *Application) rootMethodFallback(e *echo.Echo) echo.HTTPErrorHandler {
 				return
 			}
 		}
+		if errors.As(err, &he) && he.Code == http.StatusNotFound {
+			app.recordNotFound(c)
+		}
 		e.DefaultHTTPErrorHandler(err, c)
 	}
+}
+
+// recordNotFound persists a 404 probe path for analytics (same async path as /).
+func (app *Application) recordNotFound(c echo.Context) {
+	if app.handler == nil || app.handler.requestProcessor == nil {
+		return
+	}
+	rp := app.handler.requestProcessor
+	clientIP := rp.extractClientIP(c)
+	httpReq := rp.buildHTTPRequest(c.Request(), clientIP)
+	httpReq.StatusCode = http.StatusNotFound
+	httpReq.ResponseFormat = "error"
+	rp.QueueStore(httpReq)
 }
 
 // databaseMiddleware injects database dependencies into context
