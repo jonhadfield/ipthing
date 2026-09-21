@@ -83,16 +83,33 @@ func TestRootAcceptsNonGETMethods(t *testing.T) {
 	}
 	e := app.setupServer()
 
-	for _, method := range []string{
+	methods := []string{
+		http.MethodGet,
 		http.MethodPost,
 		http.MethodPut,
 		http.MethodPatch,
 		http.MethodDelete,
 		http.MethodOptions,
 		http.MethodHead,
-	} {
+		http.MethodTrace,
+		echo.PROPFIND,
+		echo.REPORT,
+		"COPY",
+		"MOVE",
+		"MKCOL",
+		"LOCK",
+		"UNLOCK",
+		"PROPPATCH",
+		"SEARCH",
+		"PURGE",
+		"ACL",
+		"TOTALLY-MADE-UP", // not registered; must hit 405 fallback
+	}
+
+	for _, method := range methods {
 		t.Run(method, func(t *testing.T) {
-			req := httptest.NewRequest(method, "/", strings.NewReader(`{"probe":true}`))
+			req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(`{"probe":true}`))
+			req.Method = method
 			req.RemoteAddr = "203.0.113.77:9"
 			req.Header.Set("User-Agent", "scanner/1.0")
 			req.Header.Set("Content-Type", "application/json")

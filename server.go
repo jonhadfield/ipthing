@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -179,10 +180,38 @@ func (app *Application) setupServer() *echo.Echo {
 	// Set template renderer
 	e.Renderer = app.template
 
+	// Unknown methods on / still hit the inspector (Echo's Any is not a true catch-all).
+	e.HTTPErrorHandler = app.rootMethodFallback(e)
+
 	// Setup routes
 	app.setupRoutes(e)
 
 	return e
+}
+
+// extraRootMethods are common scanner/WebDAV verbs beyond Echo's Any() set.
+var extraRootMethods = []string{
+	"COPY", "MOVE", "MKCOL", "LOCK", "UNLOCK", "PROPPATCH", "SEARCH", "PURGE",
+	"LINK", "UNLINK", "VIEW", "CHECKOUT", "CHECKIN", "MERGE", "ACL", "ORDERPATCH",
+	"UPDATE", "VERSION-CONTROL", "BASELINE-CONTROL", "LABEL", "MKACTIVITY",
+	"MKWORKSPACE", "BIND", "REBIND", "UNBIND",
+}
+
+// rootMethodFallback serves / for methods Echo would otherwise answer with 405.
+func (app *Application) rootMethodFallback(e *echo.Echo) echo.HTTPErrorHandler {
+	return func(err error, c echo.Context) {
+		var he *echo.HTTPError
+		if errors.As(err, &he) && he.Code == http.StatusMethodNotAllowed {
+			path := c.Request().URL.Path
+			if path == "/" || path == "" {
+				if herr := app.rootHandler(c); herr != nil {
+					e.DefaultHTTPErrorHandler(herr, c)
+				}
+				return
+			}
+		}
+		e.DefaultHTTPErrorHandler(err, c)
+	}
 }
 
 // databaseMiddleware injects database dependencies into context
@@ -208,8 +237,10 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
 	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
 
-	// Accept any method on / so scanners/bots using POST/PUT/OPTIONS/etc. are logged.
+	// Accept Echo's built-in Any methods plus common scanner/WebDAV verbs.
+	// Truly unknown methods still reach rootMethodFallback on 405 for "/".
 	e.Any("/", app.rootHandler)
+	e.Match(extraRootMethods, "/", app.rootHandler)
 }
 
 // serveEmbeddedAsset creates a handler for serving embedded static assets
