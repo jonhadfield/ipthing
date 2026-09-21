@@ -8,14 +8,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go mod download
 
 FROM base AS builder
 
-ARG VERSION_VAR
+ARG VERSION_VAR=dev
+ARG BUILD_TAG=dev
+ARG BUILD_SHA=unknown
 ENV CGO_ENABLED=0
 
 RUN mkdir /app
 COPY ./ /app/
 WORKDIR /app
 
-RUN go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}'" -o /out/server .
+RUN go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}' -X 'main.buildTag=${BUILD_TAG}' -X 'main.buildSHA=${BUILD_SHA}'" -o /out/server .
 
 ### ✅ This was missing before!
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot

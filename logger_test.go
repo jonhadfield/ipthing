@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"log"
-	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -89,11 +88,6 @@ func TestApplicationLogging(t *testing.T) {
 }
 
 func TestVersionVariable(t *testing.T) {
-	// Verify version variable exists and has a default value
-	assert.NotEmpty(t, version)
-
-	// Default version should be "dev" unless overridden by build
-	if !strings.Contains(version, "-") {
-		assert.Equal(t, "dev", version)
-	}
+	assert.NotEmpty(t, versionString())
+	assert.Equal(t, "X-IPThing-Version", versionHeader)
 }

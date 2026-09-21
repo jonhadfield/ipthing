@@ -22,26 +22,27 @@ lint:
 
 ci: lint test
 
-BUILD_TAG := $(shell git describe --tags 2>/dev/null)
-BUILD_SHA := $(shell git rev-parse --short HEAD)
+BUILD_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)
+BUILD_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_DATE := $(shell date -u '+%Y/%m/%d:%H:%M:%S')
+VERSION_LDFLAGS := -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC" -X "main.buildTag=$(BUILD_TAG)" -X "main.buildSHA=$(BUILD_SHA)"
 
 build:
-	go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_darwin_amd64"
+	go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_darwin_amd64"
 
 build-all: fmt
-	GOOS=darwin  CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_darwin_amd64"
-	GOOS=linux   CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_linux_amd64"
-	GOOS=linux   CGO_ENABLED=0 GOARCH=386 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_linux_386"
-	GOOS=linux   CGO_ENABLED=0 GOARCH=arm go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_linux_arm"
-	GOOS=linux   CGO_ENABLED=0 GOARCH=arm64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_linux_arm64"
-	GOOS=netbsd  CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_netbsd_amd64"
-	GOOS=openbsd CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_openbsd_amd64"
-	GOOS=freebsd CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_freebsd_amd64"
-	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_windows_amd64.exe"
+	GOOS=darwin  CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_darwin_amd64"
+	GOOS=linux   CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_linux_amd64"
+	GOOS=linux   CGO_ENABLED=0 GOARCH=386 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_linux_386"
+	GOOS=linux   CGO_ENABLED=0 GOARCH=arm go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_linux_arm"
+	GOOS=linux   CGO_ENABLED=0 GOARCH=arm64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_linux_arm64"
+	GOOS=netbsd  CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_netbsd_amd64"
+	GOOS=openbsd CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_openbsd_amd64"
+	GOOS=freebsd CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_freebsd_amd64"
+	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_windows_amd64.exe"
 
 build-linux-amd64: fmt
-	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w -X "main.version=[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC"' -o ".local_dist/ipthing_linux_amd64"
+	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -ldflags '-s -w $(VERSION_LDFLAGS)' -o ".local_dist/ipthing_linux_amd64"
 
 critic:
 	gocritic check ./...
@@ -70,7 +71,11 @@ IMG    := ${NAME}:${TAG}
 LATEST := ${NAME}:latest
 
 build-docker:
-	DOCKER_BUILDKIT=1 docker build --platform=linux/x86_64 --build-arg VERSION_VAR="[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC" -t ${IMG} .
+	DOCKER_BUILDKIT=1 docker build --platform=linux/x86_64 \
+		--build-arg VERSION_VAR="[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC" \
+		--build-arg BUILD_TAG="$(BUILD_TAG)" \
+		--build-arg BUILD_SHA="$(BUILD_SHA)" \
+		-t ${IMG} .
 	docker tag ${IMG} ${LATEST}
 	docker tag ${LATEST} ipthing:latest
 

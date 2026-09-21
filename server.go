@@ -22,9 +22,6 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-// version is set by the build process via ldflags
-var version = "dev"
-
 func main() {
 	// Initialize application
 	app, err := initializeApplication()
@@ -35,7 +32,10 @@ func main() {
 
 	// Log successful startup
 	log.Printf("ipthing application initialized successfully")
-	log.Printf("Version: %s", version)
+	log.Printf("Version: %s", versionString())
+	if version != "" && version != versionString() {
+		log.Printf("Build details: %s", version)
+	}
 
 	// Setup and start servers
 	app.startServers()
@@ -175,6 +175,7 @@ func (app *Application) setupServer() *echo.Echo {
 		},
 	}))
 	e.Use(middleware.Recover())
+	e.Use(versionHeaderMiddleware())
 	e.Use(rateLimitMiddleware())
 	// Bound handler work (e.g. ipinfo.io). Slow-client DoS is handled by server read timeouts.
 	e.Use(middleware.ContextTimeout(8 * time.Second))
