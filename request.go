@@ -63,31 +63,13 @@ func (rp *RequestProcessor) extractClientIP(c echo.Context) string {
 
 // buildHTTPRequest creates an HTTPRequest from the incoming request and client IP
 func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string) *HTTPRequest {
-	// Prepare headers as JSON
-	headers := make(map[string][]string)
-	for k, v := range req.Header {
-		headers[k] = v
-	}
-	headersJSON, _ := json.Marshal(headers)
+	headersJSON, _ := json.Marshal(headersForStorage(req.Header))
 
-	// Prepare query params as JSON
 	queryParams := make(map[string][]string)
 	for k, v := range req.URL.Query() {
 		queryParams[k] = v
 	}
 	queryParamsJSON, _ := json.Marshal(queryParams)
-
-	// Capture request body (first 1KB for debugging)
-	var bodyContent string
-	if req.Body != nil && req.ContentLength > 0 {
-		bodyBytes := make([]byte, 1024) // Read up to 1KB
-		n, _ := req.Body.Read(bodyBytes)
-		if n > 0 {
-			bodyContent = string(bodyBytes[:n])
-		}
-		// Note: Body would need to be restored for the actual handler
-		// This is just for logging/debugging purposes
-	}
 
 	httpReq := &HTTPRequest{
 		IP:            clientIP,
@@ -104,7 +86,7 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 		RequestURI:    req.RequestURI,
 		Host:          req.Host,
 		ContentType:   req.Header.Get("Content-Type"),
-		Body:          bodyContent,
+		// Body is intentionally not persisted: privacy risk and would consume req.Body.
 	}
 
 	// Capture TLS information if available
@@ -119,6 +101,29 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 	}
 
 	return httpReq
+}
+
+// sensitiveHeaderNames are never stored with their real values.
+var sensitiveHeaderNames = map[string]struct{}{
+	"Authorization":       {},
+	"Proxy-Authorization": {},
+	"Cookie":              {},
+	"Set-Cookie":          {},
+	"X-Api-Key":           {},
+	"X-Auth-Token":        {},
+}
+
+// headersForStorage copies headers for DB persistence, redacting secrets.
+func headersForStorage(h http.Header) map[string][]string {
+	out := make(map[string][]string, len(h))
+	for k, v := range h {
+		if _, sensitive := sensitiveHeaderNames[http.CanonicalHeaderKey(k)]; sensitive {
+			out[k] = []string{"[redacted]"}
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 // storeRequestAsync stores the request in the database asynchronously after duplicate checking

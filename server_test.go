@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -59,6 +60,38 @@ func TestExtractClientIPIgnoresForwardingHeaders(t *testing.T) {
 
 	rp := NewRequestProcessor(&NoOpDB{}, false, e.Logger)
 	assert.Equal(t, "203.0.113.99", rp.extractClientIP(c))
+}
+
+func TestHeadersForStorageRedactsSecrets(t *testing.T) {
+	h := http.Header{}
+	h.Set("Accept", "application/json")
+	h.Set("Cookie", "session=secret")
+	h.Set("Authorization", "Bearer tok")
+	h.Set("X-Api-Key", "key123")
+	h.Set("X-Forwarded-For", "203.0.113.1")
+
+	stored := headersForStorage(h)
+	assert.Equal(t, []string{"application/json"}, stored["Accept"])
+	assert.Equal(t, []string{"203.0.113.1"}, stored["X-Forwarded-For"])
+	assert.Equal(t, []string{"[redacted]"}, stored["Cookie"])
+	assert.Equal(t, []string{"[redacted]"}, stored["Authorization"])
+	assert.Equal(t, []string{"[redacted]"}, stored["X-Api-Key"])
+}
+
+func TestBuildHTTPRequestRedactsHeadersAndSkipsBody(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/?q=1", strings.NewReader(`{"password":"secret"}`))
+	req.RemoteAddr = "203.0.113.50:1"
+	req.Header.Set("Cookie", "a=b")
+	req.Header.Set("Content-Type", "application/json")
+	req.ContentLength = int64(len(`{"password":"secret"}`))
+
+	rp := NewRequestProcessor(&NoOpDB{}, false, nil)
+	httpReq := rp.buildHTTPRequest(req, "203.0.113.50")
+
+	assert.Empty(t, httpReq.Body)
+	assert.Contains(t, httpReq.Headers, `"Cookie":["[redacted]"]`)
+	assert.NotContains(t, httpReq.Headers, "session=secret")
+	assert.NotContains(t, httpReq.Headers, "password")
 }
 
 func TestIsWebBrowser(t *testing.T) {
