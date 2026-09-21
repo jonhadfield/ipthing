@@ -91,15 +91,41 @@ func (p *PostgresDB) Migrate() error {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
 
+	// Add columns if upgrading an older schema that CREATE TABLE IF NOT EXISTS won't alter.
+	for _, stmt := range []string{
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_version INTEGER`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_cipher_suite INTEGER`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_server_name TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_negotiated_protocol TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS proto TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS content_length BIGINT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS remote_addr TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS request_uri TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS host TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS scheme TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS content_type TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS body TEXT`,
+	} {
+		if _, err := p.db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to migrate http_requests columns: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (p *PostgresDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
-	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
+		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
+		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 	RETURNING id`
 
-	err := p.db.QueryRow(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer, req.Headers, req.QueryParams, req.Timestamp).Scan(&req.ID)
-	return err
+	return p.db.QueryRow(query,
+		req.IP, req.Method, req.Path, req.UserAgent, req.Referer, req.Headers, req.QueryParams, req.Timestamp,
+		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
+		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
+		req.ContentType, req.Body,
+	).Scan(&req.ID)
 }
