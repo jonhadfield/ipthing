@@ -22,6 +22,7 @@ These limits exist to keep a public inspector from being an easy resource sink:
 - Body size: **1 MiB** max; request bodies are inspected for size only and **never stored**
 - Server timeouts: **5s** read headers, **10s** read, **15s** write, **60s** idle (+ HTTP/3 idle 60s)
 - Handler bound: Echo `ContextTimeout` **8s**; prefer this over Echo’s discouraged `Timeout` middleware
+- ipinfo.io: at most **8** concurrent API fetches; DB geo cache TTL **24h** (stale cache returned on fetch failure)
 - XSS: responses use `html/template` escaping plus a tight CSP (inline CSS only, no scripts)
 
 Privacy wording lives in `PRIVACY.md` and `/privacy`. Retention is indefinite by design; do not add automatic purge unless the operator asks.

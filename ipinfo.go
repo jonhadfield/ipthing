@@ -9,21 +9,39 @@ import (
 	"time"
 )
 
-const ipInfoAPIURL = "https://ipinfo.io/%s/json"
+const (
+	ipInfoCacheTTL             = 24 * time.Hour
+	maxConcurrentIPInfoFetches = 8
+)
+
+// Overridable in tests.
+var (
+	ipInfoURLFormat  = "https://ipinfo.io/%s/json"
+	ipInfoHTTPClient = &http.Client{Timeout: 5 * time.Second}
+	ipInfoFetchSem   = make(chan struct{}, maxConcurrentIPInfoFetches)
+)
+
+// shouldUpdateIPInfo reports whether cached geo data is older than the TTL.
+func shouldUpdateIPInfo(lastUpdate time.Time) bool {
+	return time.Since(lastUpdate) > ipInfoCacheTTL
+}
 
 func fetchIPInfo(ctx context.Context, ip string) (*IPInfo, error) {
-	url := fmt.Sprintf(ipInfoAPIURL, ip)
+	select {
+	case ipInfoFetchSem <- struct{}{}:
+		defer func() { <-ipInfoFetchSem }()
+	case <-ctx.Done():
+		return nil, fmt.Errorf("ipinfo fetch queued: %w", ctx.Err())
+	}
+
+	url := fmt.Sprintf(ipInfoURLFormat, ip)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create IP info request: %w", err)
 	}
 
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := ipInfoHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch IP info: %w", err)
 	}

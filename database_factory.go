@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 )
 
 func NewDatabase(config *Config) (Database, bool, error) {
@@ -55,8 +54,4 @@ func NewDatabase(config *Config) (Database, bool, error) {
 	default:
 		return nil, false, fmt.Errorf("unsupported database type: %s", config.DatabaseType)
 	}
-}
-
-func shouldUpdateIPInfo(lastUpdate time.Time) bool {
-	return time.Since(lastUpdate) > 24*time.Hour
 }
