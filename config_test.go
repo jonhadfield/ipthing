@@ -164,7 +164,9 @@ func TestGetContentType(t *testing.T) {
 		{"favicon-32x32.png", "image/png"},
 		{"apple-touch-icon.png", "image/png"},
 		{"site.webmanifest", "application/manifest+json"},
-		{"unknown.txt", "application/octet-stream"},
+		{"robots.txt", "text/plain; charset=utf-8"},
+		{"sitemap.xml", "application/xml; charset=utf-8"},
+		{"unknown.bin", "application/octet-stream"},
 	}
 
 	for _, tt := range tests {

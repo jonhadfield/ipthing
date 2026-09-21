@@ -55,6 +55,8 @@ func TestGetContentType_AllTypes(t *testing.T) {
 		{"favicon.ico", "image/x-icon"},
 		{"icon.png", "image/png"},
 		{"manifest.webmanifest", "application/manifest+json"},
+		{"robots.txt", "text/plain; charset=utf-8"},
+		{"sitemap.xml", "application/xml; charset=utf-8"},
 		{"unknown.file", "application/octet-stream"},
 	}
 

@@ -246,7 +246,9 @@ func rateLimitMiddleware() echo.MiddlewareFunc {
 		Store: store,
 		Skipper: func(c echo.Context) bool {
 			switch c.Request().URL.Path {
-			case "/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png":
+			case "/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png",
+				"/android-chrome-192x192.png", "/android-chrome-512x512.png",
+				"/site.webmanifest", "/robots.txt", "/sitemap.xml":
 				return true
 			default:
 				return false
@@ -293,6 +295,11 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/favicon-16x16.png", app.serveEmbeddedAsset(assetFS, "favicon-16x16.png"))
 	e.GET("/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
 	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
+	e.GET("/android-chrome-192x192.png", app.serveEmbeddedAsset(assetFS, "android-chrome-192x192.png"))
+	e.GET("/android-chrome-512x512.png", app.serveEmbeddedAsset(assetFS, "android-chrome-512x512.png"))
+	e.GET("/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
+	e.GET("/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
+	e.GET("/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))
 	e.GET("/privacy", app.privacyHandler)
 
 	// Accept Echo's built-in Any methods plus common scanner/WebDAV verbs.
@@ -332,6 +339,10 @@ func getContentType(filename string) string {
 		return "image/png"
 	case strings.HasSuffix(filename, ".webmanifest"):
 		return "application/manifest+json"
+	case strings.HasSuffix(filename, ".txt"):
+		return "text/plain; charset=utf-8"
+	case strings.HasSuffix(filename, ".xml"):
+		return "application/xml; charset=utf-8"
 	default:
 		return "application/octet-stream"
 	}

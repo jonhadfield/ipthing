@@ -40,7 +40,12 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "<html lang=\"en\">")
+	body := rec.Body.String()
+	assert.Contains(t, body, "<html lang=\"en\">")
+	assert.Contains(t, body, "What is my IP?")
+	assert.Contains(t, body, `name="description"`)
+	assert.Contains(t, body, `rel="canonical"`)
+	assert.Contains(t, body, "curl https://ipthing.net")
 }
 
 func TestHandleRoot_BrowserEscapesXSSInUserAgent(t *testing.T) {
@@ -108,6 +113,51 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "retained indefinitely")
 	assert.Contains(t, body, "stats.ipthing.net")
 	assert.Contains(t, body, "jonhadfield/ipthing-analysis")
+	assert.Contains(t, body, `rel="canonical"`)
+	assert.Contains(t, body, "https://ipthing.net/privacy")
+}
+
+func TestSEOStaticRoutes(t *testing.T) {
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+
+	app := &Application{
+		handler:  NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil)),
+		template: renderer,
+	}
+	e := app.setupServer()
+
+	t.Run("robots.txt", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/robots.txt", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Header().Get("Content-Type"), "text/plain")
+		body := rec.Body.String()
+		assert.Contains(t, body, "User-agent: *")
+		assert.Contains(t, body, "Sitemap: https://ipthing.net/sitemap.xml")
+	})
+
+	t.Run("sitemap.xml", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Header().Get("Content-Type"), "application/xml")
+		body := rec.Body.String()
+		assert.Contains(t, body, "https://ipthing.net/")
+		assert.Contains(t, body, "https://ipthing.net/privacy")
+		assert.Contains(t, body, "https://stats.ipthing.net/")
+	})
+
+	t.Run("site.webmanifest", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/site.webmanifest", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Header().Get("Content-Type"), "application/manifest+json")
+		assert.Contains(t, rec.Body.String(), `"name": "IPThing"`)
+	})
 }
 
 func TestHandleRoot_JSONResponse(t *testing.T) {
