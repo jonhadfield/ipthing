@@ -176,7 +176,7 @@ func TestRootAcceptsNonGETMethods(t *testing.T) {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(`{"probe":true}`))
 			req.Method = method
-			// Unique peer per method so the 1 req/s rate limiter does not interfere.
+			// Unique peer per method so the per-IP rate limiter does not interfere.
 			req.RemoteAddr = fmt.Sprintf("203.0.113.%d:9", 10+i)
 			req.Header.Set("User-Agent", "scanner/1.0")
 			req.Header.Set("Content-Type", "application/json")

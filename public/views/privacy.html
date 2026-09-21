@@ -25,8 +25,8 @@
 <p>IPThing shows you details of the HTTP connection you made to this service (IP address, headers, TLS, and related metadata). That is the product.</p>
 
 <h2>What we store</h2>
-<p>When a database is configured, each inspected request may be recorded for operations, abuse investigation, and aggregate analysis. Typical fields include client IP and geolocation cache, method, path, query parameters, User-Agent, Referer, Host, protocol, TLS details when present, timing, response format, and a copy of request headers with secrets removed.</p>
-<p><strong>Request bodies are not stored.</strong></p>
+<p>When a database is configured, each inspected request may be recorded for operations, abuse investigation, and aggregate analysis. Typical fields include client IP and geolocation cache, method, path, query parameters, User-Agent, Referer, Host, protocol, declared content length, response status code, TLS details when present, timing, response format, and a copy of request headers with secrets removed.</p>
+<p><strong>Request bodies are not stored</strong> (oversized bodies are rejected; only size/status metadata may be recorded).</p>
 <p>Sensitive header values are redacted before persistence, including Authorization, Proxy-Authorization, Cookie, Set-Cookie, X-Api-Key, and X-Auth-Token (stored as <code>[redacted]</code>).</p>
 
 <h2>Retention</h2>

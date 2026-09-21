@@ -8,11 +8,12 @@ When a database is configured, each inspected request may be recorded for operat
 
 - Client IP and geolocation cache derived from it
 - Method, path, query parameters, User-Agent, Referer, Host, protocol, and similar request metadata
+- Declared content length and HTTP status code for the response
 - TLS details when present
 - A copy of request headers with secrets removed (see below)
 - Timing and response format
 
-**Request bodies are not stored.**
+**Request bodies are not stored** (oversized bodies are rejected; only size/status metadata may be recorded).
 
 Sensitive header values are redacted before persistence, including `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`, and `X-Auth-Token` (stored as `[redacted]`).
 
