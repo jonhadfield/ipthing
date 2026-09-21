@@ -136,6 +136,24 @@ func TestReadConfig_LegacyDatabaseURL(t *testing.T) {
 	assert.Equal(t, "postgres", config.DatabaseType)
 }
 
+func TestReadConfig_MissingFileUsesEnv(t *testing.T) {
+	t.Setenv("IPTHING_CONFIG", "")
+	t.Setenv("IPTHING_HTTP_PORT", "80")
+	t.Setenv("IPTHING_HTTPS_PORT", "443")
+	t.Setenv("IPTHING_HOST_WHITELIST", "ipthing.net, test.ipthing.net")
+	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost/ipthing")
+
+	config, err := ReadConfig("/nonexistent/config.json")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+
+	assert.Equal(t, 80, config.ListenPortHTTP)
+	assert.Equal(t, 443, config.ListenPortHTTPS)
+	assert.Equal(t, []string{"ipthing.net", "test.ipthing.net"}, config.HostWhitelist)
+	assert.Equal(t, "postgres://user:pass@localhost/ipthing", config.DatabaseConnectionString)
+	assert.Equal(t, "postgres", config.DatabaseType)
+}
+
 func TestGetContentType(t *testing.T) {
 	tests := []struct {
 		filename string

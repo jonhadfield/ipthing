@@ -61,11 +61,14 @@ func initializeApplication() (*Application, error) {
 	setupLogger(syslogWriter)
 	log.Printf("Starting ipthing initialization")
 
-	// Load configuration
+	// Load configuration (env from systemd still applies when config.json is absent)
 	config, err := ReadConfig("config.json")
 	if err != nil {
 		log.Printf("Warning: %v", err)
 		config = GetDefaultConfig()
+		applyEnvironmentOverrides(config)
+		applyLegacyEnvironmentVariables(config)
+		handleLegacyPortConfig(config)
 	}
 	log.Printf("Configuration loaded: HTTP port=%d, HTTPS port=%d", config.ListenPortHTTP, config.ListenPortHTTPS)
 

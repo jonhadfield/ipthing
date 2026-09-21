@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -28,6 +30,9 @@ func ReadConfig(filePath string) (*Config, error) {
 	config, err := loadConfigFromSources(filePath)
 	if err != nil {
 		return nil, err
+	}
+	if config == nil {
+		config = GetDefaultConfig()
 	}
 
 	// Apply environment variable overrides
@@ -60,6 +65,10 @@ func loadConfigFromSources(filePath string) (*Config, error) {
 	if filePath != "" {
 		f, err := os.ReadFile(filePath)
 		if err != nil {
+			// Missing config.json is normal when systemd env provides settings.
+			if errors.Is(err, os.ErrNotExist) {
+				return GetDefaultConfig(), nil
+			}
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
 
@@ -101,6 +110,16 @@ func applyEnvironmentOverrides(config *Config) {
 		if port, err := parseInt(httpsPort); err == nil {
 			config.ListenPortHTTPS = port
 		}
+	}
+
+	if hw := os.Getenv("IPTHING_HOST_WHITELIST"); hw != "" {
+		var hosts []string
+		for part := range strings.SplitSeq(hw, ",") {
+			if h := strings.TrimSpace(part); h != "" {
+				hosts = append(hosts, h)
+			}
+		}
+		config.HostWhitelist = hosts
 	}
 }
 
