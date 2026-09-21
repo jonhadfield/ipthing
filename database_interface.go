@@ -67,16 +67,16 @@ func (b *BaseDB) SaveHTTPRequest(req *HTTPRequest) error {
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
 		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
-		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format)
+		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format, status_code)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-		$21, $22, $23, $24, $25)`
+		$21, $22, $23, $24, $25, $26)`
 
 	result, err := b.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer,
 		req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body,
-		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat)
+		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat, req.StatusCode)
 	if err != nil {
 		return err
 	}

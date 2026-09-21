@@ -2,9 +2,9 @@ package main
 
 import (
 	"embed"
+	"html/template"
 	"io"
 	"io/fs"
-	"text/template"
 
 	"github.com/labstack/echo/v4"
 )
@@ -27,7 +27,7 @@ func NewEmbeddedRenderer() (*EmbeddedRenderer, error) {
 		return nil, err
 	}
 
-	// Parse all template files
+	// html/template auto-escapes reflected request fields (UA, Referer, XFF, etc.).
 	tmpl, err := template.ParseFS(viewsFS, "*.html")
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func NewEmbeddedRenderer() (*EmbeddedRenderer, error) {
 }
 
 // Render implements echo.Renderer interface
-func (er *EmbeddedRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+func (er *EmbeddedRenderer) Render(w io.Writer, name string, data any, c echo.Context) error {
 	return er.templates.ExecuteTemplate(w, name, data)
 }
 

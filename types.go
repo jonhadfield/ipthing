@@ -46,7 +46,8 @@ type HTTPRequest struct {
 	ClaimedXFF     string // raw X-Forwarded-For (spoofable; not trusted for IP)
 	CfConnectingIP string // Cf-Connecting-Ip (spoofable; not trusted for IP)
 	DurationMs     int64
-	ResponseFormat string // "html" or "json"
+	ResponseFormat string // "html", "json", or "error"
+	StatusCode     int    // HTTP response status written for this request
 }
 
 type RequestFingerprint struct {

@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,6 +41,71 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), "<html lang=\"en\">")
+}
+
+func TestHandleRoot_BrowserEscapesXSSInUserAgent(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+	e.Renderer = renderer
+
+	payload := `<script>alert(1)</script>`
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.10:12345"
+	req.Header.Set("User-Agent", "Mozilla/5.0 "+payload)
+	req.Header.Set("Referer", "https://evil.example/"+payload)
+	req.Header.Set("X-Forwarded-For", payload)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	handler := NewHandler(NewRequestProcessor(&NoOpDB{}, false, e.Logger))
+	require.NoError(t, handler.HandleRoot(c))
+
+	body := rec.Body.String()
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.NotContains(t, body, "<script>alert(1)</script>")
+	assert.Contains(t, body, "&lt;script&gt;alert(1)&lt;/script&gt;")
+}
+
+func TestSecurityHeadersMiddleware(t *testing.T) {
+	e := echo.New()
+	e.Use(securityHeadersMiddleware())
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	csp := rec.Header().Get("Content-Security-Policy")
+	assert.Contains(t, csp, "default-src 'none'")
+	assert.Contains(t, csp, "style-src 'unsafe-inline'")
+	assert.Contains(t, csp, "img-src 'self'")
+	assert.Equal(t, "nosniff", rec.Header().Get("X-Content-Type-Options"))
+	assert.Equal(t, "no-referrer", rec.Header().Get("Referrer-Policy"))
+}
+
+func TestPrivacyPage(t *testing.T) {
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+
+	app := &Application{
+		handler:  NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil)),
+		template: renderer,
+	}
+	e := app.setupServer()
+
+	req := httptest.NewRequest(http.MethodGet, "/privacy", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "Request bodies are not stored")
+	assert.Contains(t, body, "[redacted]")
+	assert.Contains(t, body, "retained indefinitely")
 }
 
 func TestHandleRoot_JSONResponse(t *testing.T) {
@@ -106,11 +172,12 @@ func TestRootAcceptsNonGETMethods(t *testing.T) {
 		"TOTALLY-MADE-UP", // not registered; must hit 405 fallback
 	}
 
-	for _, method := range methods {
+	for i, method := range methods {
 		t.Run(method, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(`{"probe":true}`))
 			req.Method = method
-			req.RemoteAddr = "203.0.113.77:9"
+			// Unique peer per method so the 1 req/s rate limiter does not interfere.
+			req.RemoteAddr = fmt.Sprintf("203.0.113.%d:9", 10+i)
 			req.Header.Set("User-Agent", "scanner/1.0")
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
@@ -119,7 +186,7 @@ func TestRootAcceptsNonGETMethods(t *testing.T) {
 
 			assert.Equal(t, http.StatusOK, rec.Code, "method %s should not 405", method)
 			if method != http.MethodHead {
-				assert.Contains(t, rec.Body.String(), "203.0.113.77")
+				assert.Contains(t, rec.Body.String(), fmt.Sprintf("203.0.113.%d", 10+i))
 				assert.Contains(t, rec.Body.String(), method)
 			}
 		})

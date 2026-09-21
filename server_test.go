@@ -145,6 +145,7 @@ func TestHandleRoot_SetsFormatAndDuration(t *testing.T) {
 
 	saved := db.getSaved()
 	assert.Equal(t, "json", saved.ResponseFormat)
+	assert.Equal(t, http.StatusOK, saved.StatusCode)
 	assert.GreaterOrEqual(t, saved.DurationMs, int64(0))
 	assert.Equal(t, "198.51.100.1", saved.ClaimedXFF)
 	assert.False(t, saved.HasCookies)
@@ -166,4 +167,60 @@ func TestIsWebBrowser(t *testing.T) {
 		result := IsWebBrowser(tt.userAgent)
 		assert.Equal(t, tt.expected, result, "Failed for user agent: %s", tt.userAgent)
 	}
+}
+
+func TestClacksOverheadMiddleware(t *testing.T) {
+	e := echo.New()
+	e.Use(clacksOverheadMiddleware())
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "GNU Terry Pratchett", rec.Header().Get("X-Clacks-Overhead"))
+}
+
+func TestRateLimitMiddleware_PerIP(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+	e.Use(rateLimitMiddleware())
+	e.Any("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
+	e.GET("/favicon.ico", func(c echo.Context) error {
+		return c.NoContent(http.StatusNoContent)
+	})
+
+	// Burst allows a short spike (10) before 429.
+	for i := range 10 {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = "203.0.113.200:1"
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code, "request %d within burst should succeed", i+1)
+	}
+
+	reqDenied := httptest.NewRequest(http.MethodGet, "/", nil)
+	reqDenied.RemoteAddr = "203.0.113.200:1"
+	recDenied := httptest.NewRecorder()
+	e.ServeHTTP(recDenied, reqDenied)
+	assert.Equal(t, http.StatusTooManyRequests, recDenied.Code)
+
+	// Different source is unaffected.
+	reqOther := httptest.NewRequest(http.MethodGet, "/", nil)
+	reqOther.RemoteAddr = "203.0.113.201:1"
+	recOther := httptest.NewRecorder()
+	e.ServeHTTP(recOther, reqOther)
+	assert.Equal(t, http.StatusOK, recOther.Code)
+
+	// Favicon is skipped even for the limited IP.
+	reqFav := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	reqFav.RemoteAddr = "203.0.113.200:1"
+	recFav := httptest.NewRecorder()
+	e.ServeHTTP(recFav, reqFav)
+	assert.Equal(t, http.StatusNoContent, recFav.Code)
 }

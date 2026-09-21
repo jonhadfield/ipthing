@@ -1,0 +1,41 @@
+{{define "privacy"}}
+<html lang="en">
+<head>
+    <title>IPThing — Privacy</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            max-width: 48rem;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.45;
+        }
+        a { color: #9cf; }
+        h1, h2 { font-weight: normal; }
+        ul { padding-left: 1.25rem; }
+    </style>
+</head>
+<body>
+<h1>Privacy</h1>
+<p>IPThing shows you details of the HTTP connection you made to this service (IP address, headers, TLS, and related metadata). That is the product.</p>
+
+<h2>What we store</h2>
+<p>When a database is configured, each inspected request may be recorded for operations, abuse investigation, and aggregate analysis. Typical fields include client IP and geolocation cache, method, path, query parameters, User-Agent, Referer, Host, protocol, TLS details when present, timing, response format, and a copy of request headers with secrets removed.</p>
+<p><strong>Request bodies are not stored.</strong></p>
+<p>Sensitive header values are redacted before persistence, including Authorization, Proxy-Authorization, Cookie, Set-Cookie, X-Api-Key, and X-Auth-Token (stored as <code>[redacted]</code>).</p>
+
+<h2>Retention</h2>
+<p>Request and related records are retained indefinitely unless the operator deletes them manually.</p>
+
+<h2>Purpose</h2>
+<p>Processing is for providing the inspection service you requested, securing and operating the service, and understanding usage patterns. If you are in the EEA/UK and have questions about personal data held about your visits, contact the service operator.</p>
+
+<p><a href="/">← Back</a></p>
+</body>
+</html>
+{{end}}

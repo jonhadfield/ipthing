@@ -41,6 +41,7 @@ func (h *Handler) HandleRoot(c echo.Context) error {
 		writeErr = c.JSONBlob(http.StatusOK, consoleData)
 	}
 
+	httpReq.StatusCode = http.StatusOK
 	httpReq.DurationMs = time.Since(start).Milliseconds()
 	h.requestProcessor.QueueStore(httpReq)
 

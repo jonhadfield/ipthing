@@ -73,6 +73,7 @@ func (s *SQLiteDB) Migrate() error {
 		cf_connecting_ip TEXT,
 		duration_ms INTEGER,
 		response_format TEXT,
+		status_code INTEGER,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -99,6 +100,7 @@ func (s *SQLiteDB) Migrate() error {
 		`ALTER TABLE http_requests ADD COLUMN cf_connecting_ip TEXT`,
 		`ALTER TABLE http_requests ADD COLUMN duration_ms INTEGER`,
 		`ALTER TABLE http_requests ADD COLUMN response_format TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN status_code INTEGER`,
 	} {
 		// SQLite errors if the column already exists; ignore that.
 		_, _ = s.db.Exec(stmt)
@@ -135,15 +137,15 @@ func (s *SQLiteDB) SaveHTTPRequest(req *HTTPRequest) error {
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
 		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
-		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format, status_code)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer,
 		req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body,
-		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat)
+		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat, req.StatusCode)
 	if err != nil {
 		return err
 	}

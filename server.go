@@ -175,6 +175,9 @@ func (app *Application) setupServer() *echo.Echo {
 		},
 	}))
 	e.Use(middleware.Recover())
+	e.Use(rateLimitMiddleware())
+	e.Use(clacksOverheadMiddleware())
+	e.Use(securityHeadersMiddleware())
 	e.Use(app.databaseMiddleware())
 
 	// Configure TLS
@@ -228,10 +231,57 @@ func (app *Application) databaseMiddleware() echo.MiddlewareFunc {
 	}
 }
 
+// rateLimitMiddleware caps each client IP at 5 requests per second with a burst of 10.
+// Static assets are skipped so a browser page load is not blocked by favicon fetches.
+func rateLimitMiddleware() echo.MiddlewareFunc {
+	store := middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
+		Rate:  5,
+		Burst: 10,
+	})
+	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: store,
+		Skipper: func(c echo.Context) bool {
+			switch c.Request().URL.Path {
+			case "/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png":
+				return true
+			default:
+				return false
+			}
+		},
+		IdentifierExtractor: func(c echo.Context) (string, error) {
+			return c.RealIP(), nil
+		},
+	})
+}
+
+// clacksOverheadMiddleware adds the GNU Terry Pratchett Clacks header to every response.
+func clacksOverheadMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Set("X-Clacks-Overhead", "GNU Terry Pratchett")
+			return next(c)
+		}
+	}
+}
+
+// securityHeadersMiddleware sets a tight CSP for the metadata page (inline CSS only, no scripts).
+func securityHeadersMiddleware() echo.MiddlewareFunc {
+	const csp = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			h := c.Response().Header()
+			h.Set("Content-Security-Policy", csp)
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("Referrer-Policy", "no-referrer")
+			return next(c)
+		}
+	}
+}
+
 // setupRoutes configures all application routes
 func (app *Application) setupRoutes(e *echo.Echo) {
-	// Cap request bodies: we inspect metadata, not process payloads.
-	e.Use(middleware.BodyLimit("64KB"))
+	// Cap request bodies (1 MiB): we inspect metadata, not process payloads.
+	e.Use(app.requestBodyLimitMiddleware())
 
 	// Embedded static files
 	assetFS := GetAssetFS()
@@ -239,11 +289,17 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/favicon-16x16.png", app.serveEmbeddedAsset(assetFS, "favicon-16x16.png"))
 	e.GET("/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
 	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
+	e.GET("/privacy", app.privacyHandler)
 
 	// Accept Echo's built-in Any methods plus common scanner/WebDAV verbs.
 	// Truly unknown methods still reach rootMethodFallback on 405 for "/".
 	e.Any("/", app.rootHandler)
 	e.Match(extraRootMethods, "/", app.rootHandler)
+}
+
+// privacyHandler serves the short privacy notice.
+func (app *Application) privacyHandler(c echo.Context) error {
+	return c.Render(http.StatusOK, "privacy", nil)
 }
 
 // serveEmbeddedAsset creates a handler for serving embedded static assets
