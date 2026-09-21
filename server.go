@@ -198,6 +198,9 @@ func (app *Application) databaseMiddleware() echo.MiddlewareFunc {
 
 // setupRoutes configures all application routes
 func (app *Application) setupRoutes(e *echo.Echo) {
+	// Cap request bodies: we inspect metadata, not process payloads.
+	e.Use(middleware.BodyLimit("64KB"))
+
 	// Embedded static files
 	assetFS := GetAssetFS()
 	e.GET("/favicon.ico", app.serveEmbeddedAsset(assetFS, "favicon.ico"))
@@ -205,8 +208,8 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
 	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
 
-	// Main route
-	e.GET("/", app.rootHandler)
+	// Accept any method on / so scanners/bots using POST/PUT/OPTIONS/etc. are logged.
+	e.Any("/", app.rootHandler)
 }
 
 // serveEmbeddedAsset creates a handler for serving embedded static assets

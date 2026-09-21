@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -74,6 +75,38 @@ func TestHandleRoot_JSONResponse(t *testing.T) {
 	assert.Equal(t, "203.0.113.50", responseData["IPAddr"])
 	assert.Equal(t, "curl/7.68.0", responseData["UserAgent"])
 	assert.Equal(t, "198.51.100.2", responseData["XFF"])
+}
+
+func TestRootAcceptsNonGETMethods(t *testing.T) {
+	app := &Application{
+		handler: NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil)),
+	}
+	e := app.setupServer()
+
+	for _, method := range []string{
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodPatch,
+		http.MethodDelete,
+		http.MethodOptions,
+		http.MethodHead,
+	} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/", strings.NewReader(`{"probe":true}`))
+			req.RemoteAddr = "203.0.113.77:9"
+			req.Header.Set("User-Agent", "scanner/1.0")
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusOK, rec.Code, "method %s should not 405", method)
+			if method != http.MethodHead {
+				assert.Contains(t, rec.Body.String(), "203.0.113.77")
+				assert.Contains(t, rec.Body.String(), method)
+			}
+		})
+	}
 }
 
 func TestBuildResponseData_WithTLS(t *testing.T) {
