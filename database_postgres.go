@@ -71,6 +71,11 @@ func (p *PostgresDB) Migrate() error {
 		scheme TEXT,
 		content_type TEXT,
 		body TEXT,
+		has_cookies BOOLEAN,
+		claimed_xff TEXT,
+		cf_connecting_ip TEXT,
+		duration_ms BIGINT,
+		response_format TEXT,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -105,6 +110,11 @@ func (p *PostgresDB) Migrate() error {
 		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS scheme TEXT`,
 		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS content_type TEXT`,
 		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS body TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS has_cookies BOOLEAN`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS claimed_xff TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS cf_connecting_ip TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS duration_ms BIGINT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS response_format TEXT`,
 	} {
 		if _, err := p.db.Exec(stmt); err != nil {
 			return fmt.Errorf("failed to migrate http_requests columns: %w", err)
@@ -118,8 +128,10 @@ func (p *PostgresDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
-		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
+		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+		$21, $22, $23, $24, $25)
 	RETURNING id`
 
 	return p.db.QueryRow(query,
@@ -127,5 +139,6 @@ func (p *PostgresDB) SaveHTTPRequest(req *HTTPRequest) error {
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body,
+		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat,
 	).Scan(&req.ID)
 }

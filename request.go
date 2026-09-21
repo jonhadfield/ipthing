@@ -44,13 +44,8 @@ func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInf
 		}
 	}
 
-	// Create HTTP request record
+	// Create HTTP request record (storage deferred until response format/latency known)
 	httpReq := rp.buildHTTPRequest(req, clientIP)
-
-	// Store request in database asynchronously if database is configured
-	if rp.dbDefined && clientIP != "" {
-		go rp.storeRequestAsync(httpReq)
-	}
 
 	return httpReq, ipInfo, nil
 }
@@ -72,21 +67,23 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 	queryParamsJSON, _ := json.Marshal(queryParams)
 
 	httpReq := &HTTPRequest{
-		IP:            clientIP,
-		Method:        req.Method,
-		Path:          req.URL.Path,
-		UserAgent:     req.UserAgent(),
-		Referer:       req.Header.Get("Referer"),
-		Headers:       string(headersJSON),
-		QueryParams:   string(queryParamsJSON),
-		Timestamp:     time.Now(),
-		Proto:         req.Proto,
-		ContentLength: req.ContentLength,
-		RemoteAddr:    req.RemoteAddr,
-		RequestURI:    req.RequestURI,
-		Host:          req.Host,
-		ContentType:   req.Header.Get("Content-Type"),
-		// Body is intentionally not persisted: privacy risk and would consume req.Body.
+		IP:             clientIP,
+		Method:         req.Method,
+		Path:           req.URL.Path,
+		UserAgent:      req.UserAgent(),
+		Referer:        req.Header.Get("Referer"),
+		Headers:        string(headersJSON),
+		QueryParams:    string(queryParamsJSON),
+		Timestamp:      time.Now(),
+		Proto:          req.Proto,
+		ContentLength:  req.ContentLength,
+		RemoteAddr:     req.RemoteAddr,
+		RequestURI:     req.RequestURI,
+		Host:           req.Host,
+		ContentType:    req.Header.Get("Content-Type"),
+		HasCookies:     req.Header.Get("Cookie") != "",
+		ClaimedXFF:     req.Header.Get("X-Forwarded-For"),
+		CfConnectingIP: req.Header.Get("Cf-Connecting-Ip"),
 	}
 
 	// Capture TLS information if available
@@ -124,6 +121,14 @@ func headersForStorage(h http.Header) map[string][]string {
 		out[k] = v
 	}
 	return out
+}
+
+// QueueStore persists the request asynchronously when a database is configured.
+func (rp *RequestProcessor) QueueStore(httpReq *HTTPRequest) {
+	if !rp.dbDefined || httpReq == nil || httpReq.IP == "" {
+		return
+	}
+	go rp.storeRequestAsync(httpReq)
 }
 
 // storeRequestAsync stores the request in the database asynchronously after duplicate checking

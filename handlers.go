@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -21,22 +22,29 @@ func NewHandler(requestProcessor *RequestProcessor) *Handler {
 
 // HandleRoot handles the main route that displays client information
 func (h *Handler) HandleRoot(c echo.Context) error {
-	// Process the request and extract information
+	start := time.Now()
+
 	httpReq, ipInfo, err := h.requestProcessor.ProcessRequest(c)
 	if err != nil {
 		return err
 	}
 
-	// Build response data
 	responseData := h.buildResponseData(c.Request(), httpReq, ipInfo)
 
-	// Determine response format based on User-Agent
+	var writeErr error
 	if IsWebBrowser(c.Request().UserAgent()) {
-		return c.Render(http.StatusOK, "web", responseData)
+		httpReq.ResponseFormat = "html"
+		writeErr = c.Render(http.StatusOK, "web", responseData)
 	} else {
+		httpReq.ResponseFormat = "json"
 		consoleData, _ := json.MarshalIndent(responseData, "", "  ")
-		return c.JSONBlob(http.StatusOK, consoleData)
+		writeErr = c.JSONBlob(http.StatusOK, consoleData)
 	}
+
+	httpReq.DurationMs = time.Since(start).Milliseconds()
+	h.requestProcessor.QueueStore(httpReq)
+
+	return writeErr
 }
 
 // buildResponseData creates the response data structure from request information

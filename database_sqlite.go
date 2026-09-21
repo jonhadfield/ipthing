@@ -68,6 +68,11 @@ func (s *SQLiteDB) Migrate() error {
 		scheme TEXT,
 		content_type TEXT,
 		body TEXT,
+		has_cookies INTEGER,
+		claimed_xff TEXT,
+		cf_connecting_ip TEXT,
+		duration_ms INTEGER,
+		response_format TEXT,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -86,6 +91,17 @@ func (s *SQLiteDB) Migrate() error {
 
 	if _, err := s.db.Exec(indexSchema); err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
+	}
+
+	for _, stmt := range []string{
+		`ALTER TABLE http_requests ADD COLUMN has_cookies INTEGER`,
+		`ALTER TABLE http_requests ADD COLUMN claimed_xff TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN cf_connecting_ip TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN duration_ms INTEGER`,
+		`ALTER TABLE http_requests ADD COLUMN response_format TEXT`,
+	} {
+		// SQLite errors if the column already exists; ignore that.
+		_, _ = s.db.Exec(stmt)
 	}
 
 	return nil
@@ -118,14 +134,16 @@ func (s *SQLiteDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
-		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
+		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer,
 		req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
-		req.ContentType, req.Body)
+		req.ContentType, req.Body,
+		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat)
 	if err != nil {
 		return err
 	}

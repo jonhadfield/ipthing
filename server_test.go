@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -83,15 +85,69 @@ func TestBuildHTTPRequestRedactsHeadersAndSkipsBody(t *testing.T) {
 	req.RemoteAddr = "203.0.113.50:1"
 	req.Header.Set("Cookie", "a=b")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-For", "198.51.100.1, 10.0.0.1")
+	req.Header.Set("Cf-Connecting-Ip", "203.0.113.9")
 	req.ContentLength = int64(len(`{"password":"secret"}`))
 
 	rp := NewRequestProcessor(&NoOpDB{}, false, nil)
 	httpReq := rp.buildHTTPRequest(req, "203.0.113.50")
 
 	assert.Empty(t, httpReq.Body)
+	assert.True(t, httpReq.HasCookies)
+	assert.Equal(t, "198.51.100.1, 10.0.0.1", httpReq.ClaimedXFF)
+	assert.Equal(t, "203.0.113.9", httpReq.CfConnectingIP)
 	assert.Contains(t, httpReq.Headers, `"Cookie":["[redacted]"]`)
 	assert.NotContains(t, httpReq.Headers, "session=secret")
 	assert.NotContains(t, httpReq.Headers, "password")
+}
+
+type recordingDB struct {
+	NoOpDB
+	mu    sync.Mutex
+	saved *HTTPRequest
+}
+
+func (r *recordingDB) SaveHTTPRequest(req *HTTPRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	cp := *req
+	r.saved = &cp
+	return nil
+}
+
+func (r *recordingDB) getSaved() *HTTPRequest {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.saved
+}
+
+func TestHandleRoot_SetsFormatAndDuration(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.50:54321"
+	req.Header.Set("User-Agent", "curl/7.68.0")
+	req.Header.Set("X-Forwarded-For", "198.51.100.1")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	db := &recordingDB{}
+	rp := NewRequestProcessor(db, true, e.Logger)
+	handler := NewHandler(rp)
+
+	err := handler.HandleRoot(c)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		return db.getSaved() != nil
+	}, time.Second, 10*time.Millisecond)
+
+	saved := db.getSaved()
+	assert.Equal(t, "json", saved.ResponseFormat)
+	assert.GreaterOrEqual(t, saved.DurationMs, int64(0))
+	assert.Equal(t, "198.51.100.1", saved.ClaimedXFF)
+	assert.False(t, saved.HasCookies)
 }
 
 func TestIsWebBrowser(t *testing.T) {

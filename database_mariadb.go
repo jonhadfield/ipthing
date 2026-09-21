@@ -71,6 +71,11 @@ func (m *MariaDB) Migrate() error {
 		scheme VARCHAR(10),
 		content_type VARCHAR(255),
 		body TEXT,
+		has_cookies BOOLEAN,
+		claimed_xff TEXT,
+		cf_connecting_ip VARCHAR(45),
+		duration_ms BIGINT,
+		response_format VARCHAR(10),
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -91,6 +96,18 @@ func (m *MariaDB) Migrate() error {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
 
+	for _, stmt := range []string{
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS has_cookies BOOLEAN`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS claimed_xff TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS cf_connecting_ip VARCHAR(45)`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS duration_ms BIGINT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS response_format VARCHAR(10)`,
+	} {
+		if _, err := m.db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to migrate http_requests columns: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -98,14 +115,16 @@ func (m *MariaDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
-		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
+		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	result, err := m.db.Exec(query,
 		req.IP, req.Method, req.Path, req.UserAgent, req.Referer, req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body,
+		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat,
 	)
 	if err != nil {
 		return err

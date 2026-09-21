@@ -40,7 +40,13 @@ type HTTPRequest struct {
 	Scheme        string // http or https
 	// Request body info
 	ContentType string
-	Body        string // First 1KB of body for debugging
+	Body        string // Intentionally unused for persistence (privacy)
+	// Inspection / analytics
+	HasCookies     bool
+	ClaimedXFF     string // raw X-Forwarded-For (spoofable; not trusted for IP)
+	CfConnectingIP string // Cf-Connecting-Ip (spoofable; not trusted for IP)
+	DurationMs     int64
+	ResponseFormat string // "html" or "json"
 }
 
 type RequestFingerprint struct {
