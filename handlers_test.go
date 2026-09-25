@@ -395,4 +395,22 @@ func TestWWWRedirectsToApex(t *testing.T) {
 	apexRec := httptest.NewRecorder()
 	e.ServeHTTP(apexRec, apex)
 	assert.Equal(t, http.StatusOK, apexRec.Code)
+
+	// Plain HTTP stays available: www keeps the scheme, and browsers are not upgraded.
+	const browserUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+	httpWWW := httptest.NewRequest(http.MethodGet, "/privacy", nil)
+	httpWWW.Host = "www.ipthing.net"
+	httpWWW.Header.Set("User-Agent", browserUA)
+	httpWWWRec := httptest.NewRecorder()
+	e.ServeHTTP(httpWWWRec, httpWWW)
+	assert.Equal(t, http.StatusMovedPermanently, httpWWWRec.Code)
+	assert.Equal(t, "http://ipthing.net/privacy", httpWWWRec.Header().Get("Location"))
+
+	httpApex := httptest.NewRequest(http.MethodGet, "/privacy", nil)
+	httpApex.Host = "ipthing.net"
+	httpApex.Header.Set("User-Agent", browserUA)
+	httpApexRec := httptest.NewRecorder()
+	e.ServeHTTP(httpApexRec, httpApex)
+	assert.Equal(t, http.StatusOK, httpApexRec.Code)
+	assert.Empty(t, httpApexRec.Header().Get("Strict-Transport-Security"))
 }
