@@ -395,11 +395,11 @@
     <p>IP location is estimated from registry and network data, so it is often only accurate to the city or region. If you use a VPN, proxy, Tor or iCloud Private Relay, you will see the address and location of that service instead of your own.</p>
 
     <h2>IPv4 and IPv6</h2>
-    <p>IPv4 addresses look like <code>203.0.113.7</code>; IPv6 addresses look like <code>2001:db8::1</code>. IPThing is reached over IPv4, so it shows your public IPv4 address.</p>
+    <p>IPv4 addresses look like <code>203.0.113.7</code>; IPv6 addresses look like <code>2001:db8::1</code>. IPThing accepts both. If your connection has IPv6, your device will usually prefer it, so you will see your IPv6 address; otherwise you will see your IPv4 address.</p>
 
     <h2>Check your IP from the command line</h2>
     <pre>curl https://ipthing.net</pre>
-    <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser.</p>
+    <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser. Add <code>-4</code> or <code>-6</code> to check your IPv4 or IPv6 address specifically.</p>
 </div>
 <p style="text-align:center;font-family:monospace;margin-top:2rem;">
     <a href="https://stats.ipthing.net/" style="color:#9cf;">Stats</a>
