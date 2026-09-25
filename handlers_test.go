@@ -43,7 +43,7 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 	body := rec.Body.String()
 	assert.Contains(t, body, "<html lang=\"en\">")
-	assert.Contains(t, body, "What is my IP?")
+	assert.Contains(t, body, "What is my IP address?")
 	assert.Contains(t, body, `name="description"`)
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "curl https://ipthing.net")

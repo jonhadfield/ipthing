@@ -1,19 +1,34 @@
 {{define "web"}}
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>What is my IP? — IPThing</title>
-    <meta name="description" content="See your public IP address, HTTP request headers, and TLS details for this connection. Works in the browser or via curl for JSON.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What Is My IP Address? — IPThing</title>
+    <meta name="description" content="What is my IP? See your public IP address instantly, plus location, ISP, HTTP headers and TLS details. No ads, no JavaScript, and JSON for curl.">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="https://ipthing.net/">
-    <meta property="og:title" content="What is my IP? — IPThing">
-    <meta property="og:description" content="See your public IP address, HTTP headers, and TLS details. Browser HTML or curl for JSON.">
+    <meta property="og:site_name" content="IPThing">
+    <meta property="og:title" content="What Is My IP Address? — IPThing">
+    <meta property="og:description" content="See your public IP address, location, ISP, HTTP headers and TLS details. Browser HTML or curl for JSON.">
     <meta property="og:url" content="https://ipthing.net/">
     <meta property="og:type" content="website">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "IPThing",
+        "url": "https://ipthing.net/",
+        "description": "Shows your public IP address, approximate location, ISP, HTTP request headers and TLS details.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}
+    }
+    </script>
     <style>
         body {
             background-color: black;
@@ -21,7 +36,7 @@
             margin: 0;
             padding: 20px;
         }
-        .intro {
+        .intro, .about {
             font-family: monospace;
             max-width: 1024px;
             margin: 0 auto 1.5rem auto;
@@ -32,11 +47,32 @@
             font-size: 1.25rem;
             margin: 0 0 0.5rem 0;
         }
-        .intro p { margin: 0.4rem 0; }
-        .intro a { color: #9cf; }
+        .intro p, .about p { margin: 0.4rem 0; }
+        .intro a, .about a { color: #9cf; }
+        .ip-label { color: #aaa; }
+        .ip {
+            font-size: 2rem;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+        .about {
+            margin-top: 2.5rem;
+            border-top: 1px solid #333;
+            padding-top: 1rem;
+        }
+        .about h2 {
+            font-weight: normal;
+            font-size: 1.1rem;
+            margin: 1.25rem 0 0.4rem 0;
+        }
+        .about pre {
+            margin: 0.4rem 0;
+            white-space: pre-wrap;
+        }
         table {
             font-family: monospace;
-            width: 1024px;
+            width: 100%;
+            max-width: 1024px;
             text-align: left;
             margin-left: auto;
             margin-right: auto;
@@ -44,21 +80,28 @@
         }
         table td, table th {
             padding: 4px 10px;
+            vertical-align: top;
+            overflow-wrap: anywhere;
         }
-        table thead {
-        }
-        table thead th {
+        table td:first-child {
+            white-space: nowrap;
         }
         table tfoot {
             font-weight: bold;
+        }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            table td, table th { padding: 3px 4px; }
+            table td:first-child { white-space: normal; overflow-wrap: normal; width: 35%; }
         }
     </style>
 </head>
 <body>
 <div class="intro">
-    <h1>IPThing — what is my IP?</h1>
-    <p>IPThing shows your public IP address, HTTP headers, and TLS details for this connection. Open in a browser for HTML, or run <code>curl https://ipthing.net</code> for JSON.</p>
-    <p>Aggregate traffic charts: <a href="https://stats.ipthing.net/">stats.ipthing.net</a>.</p>
+    <h1>What is my IP address?</h1>
+    <p class="ip-label">Your public IP address is</p>
+    <p class="ip">{{ .IPAddr }}</p>
+    <p>This is the address websites see when you connect to them. Below are its approximate location and network, plus the HTTP headers and TLS details your browser sent. Run <code>curl https://ipthing.net</code> for the same data as JSON.</p>
 </div>
 <table>
     <tbody>
@@ -341,6 +384,23 @@
     {{ end }}
     </tbody>
 </table>
+<div class="about">
+    <h2>What is an IP address?</h2>
+    <p>An IP (Internet Protocol) address is the number that identifies your connection on the internet. Every site you visit sees it, and it is how replies find their way back to you. Your internet provider usually assigns it, and it can change over time.</p>
+
+    <h2>Why is this different from the IP on my device?</h2>
+    <p>Your computer or phone usually has a private address, such as <code>192.168.x.x</code> or <code>10.x.x.x</code>, that only works on your home or office network. Your router shares one public address between every device behind it. The address shown above is that public one.</p>
+
+    <h2>Why does it show a different location or provider?</h2>
+    <p>IP location is estimated from registry and network data, so it is often only accurate to the city or region. If you use a VPN, proxy, Tor or iCloud Private Relay, you will see the address and location of that service instead of your own.</p>
+
+    <h2>IPv4 and IPv6</h2>
+    <p>IPv4 addresses look like <code>203.0.113.7</code>; IPv6 addresses look like <code>2001:db8::1</code>. IPThing is reached over IPv4, so it shows your public IPv4 address.</p>
+
+    <h2>Check your IP from the command line</h2>
+    <pre>curl https://ipthing.net</pre>
+    <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser.</p>
+</div>
 <p style="text-align:center;font-family:monospace;margin-top:2rem;">
     <a href="https://stats.ipthing.net/" style="color:#9cf;">Stats</a>
     ·
