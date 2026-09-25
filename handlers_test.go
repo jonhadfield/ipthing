@@ -184,7 +184,7 @@ func TestSEOStaticRoutes(t *testing.T) {
 		body := rec.Body.String()
 		assert.Contains(t, body, "https://ipthing.net/")
 		assert.Contains(t, body, "https://ipthing.net/privacy")
-		assert.Contains(t, body, "https://stats.ipthing.net/")
+		assert.NotContains(t, body, "stats.ipthing.net")
 	})
 
 	t.Run("site.webmanifest", func(t *testing.T) {
