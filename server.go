@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -398,6 +401,9 @@ func (app *Application) startServers() {
 
 	// Always start HTTP server
 	httpServer := app.setupServer()
+	if app.config.ListenPortHTTPS != 0 {
+		httpServer.Pre(browserHTTPSRedirectMiddleware(httpsPort, app.config.HostWhitelist))
+	}
 	go func() {
 		log.Printf("Starting HTTP server on port %d", httpPort)
 		if err := httpServer.Start(fmt.Sprintf(":%d", httpPort)); err != nil && err != http.ErrServerClosed {
@@ -498,6 +504,32 @@ func newHTTP3Server(e *echo.Echo, listenPort int) *http3.Server {
 		Port:        listenPort,
 		TLSConfig:   http3.ConfigureTLSConfig(tlsConf),
 		IdleTimeout: 60 * time.Second,
+	}
+}
+
+// browserHTTPSRedirectMiddleware sends browsers (including Googlebot) on plain HTTP to HTTPS
+// so one scheme is indexed. curl and scripts keep getting JSON over HTTP. Only hosts in the
+// AutoTLS whitelist are redirected, as those are the only ones with a certificate.
+func browserHTTPSRedirectMiddleware(httpsPort int, hostWhitelist []string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			req := c.Request()
+			if req.TLS != nil || (req.Method != http.MethodGet && req.Method != http.MethodHead) ||
+				!IsWebBrowser(req.UserAgent()) {
+				return next(c)
+			}
+			host := req.Host
+			if h, _, err := net.SplitHostPort(host); err == nil {
+				host = h
+			}
+			if !slices.Contains(hostWhitelist, host) {
+				return next(c)
+			}
+			if httpsPort != 443 {
+				host = net.JoinHostPort(host, strconv.Itoa(httpsPort))
+			}
+			return c.Redirect(http.StatusMovedPermanently, "https://"+host+req.RequestURI)
+		}
 	}
 }
 

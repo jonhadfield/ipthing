@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -238,4 +239,50 @@ func TestRateLimitMiddleware_PerIP(t *testing.T) {
 	recFav := httptest.NewRecorder()
 	e.ServeHTTP(recFav, reqFav)
 	assert.Equal(t, http.StatusNoContent, recFav.Code)
+}
+
+func TestBrowserHTTPSRedirectMiddleware(t *testing.T) {
+	const browserUA = "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (compatible; Googlebot/2.1)"
+	hosts := []string{"ipthing.net", "www.ipthing.net"}
+
+	tests := []struct {
+		name      string
+		method    string
+		host      string
+		userAgent string
+		tls       bool
+		httpsPort int
+		wantCode  int
+		wantLoc   string
+	}{
+		{"browser redirected", http.MethodGet, "ipthing.net", browserUA, false, 443, http.StatusMovedPermanently, "https://ipthing.net/privacy?x=1"},
+		{"browser with port redirected", http.MethodGet, "ipthing.net:80", browserUA, false, 443, http.StatusMovedPermanently, "https://ipthing.net/privacy?x=1"},
+		{"non-default https port kept", http.MethodGet, "ipthing.net", browserUA, false, 8443, http.StatusMovedPermanently, "https://ipthing.net:8443/privacy?x=1"},
+		{"curl keeps http", http.MethodGet, "ipthing.net", "curl/8.7.1", false, 443, http.StatusOK, ""},
+		{"host without cert keeps http", http.MethodGet, "localhost:8080", browserUA, false, 443, http.StatusOK, ""},
+		{"post keeps http", http.MethodPost, "ipthing.net", browserUA, false, 443, http.StatusOK, ""},
+		{"already https", http.MethodGet, "ipthing.net", browserUA, true, 443, http.StatusOK, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := echo.New()
+			e.Pre(browserHTTPSRedirectMiddleware(tt.httpsPort, hosts))
+			e.Any("/privacy", func(c echo.Context) error {
+				return c.String(http.StatusOK, "ok")
+			})
+
+			req := httptest.NewRequest(tt.method, "/privacy?x=1", nil)
+			req.Host = tt.host
+			req.Header.Set("User-Agent", tt.userAgent)
+			if tt.tls {
+				req.TLS = &tls.ConnectionState{}
+			}
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, req)
+
+			assert.Equal(t, tt.wantCode, rec.Code)
+			assert.Equal(t, tt.wantLoc, rec.Header().Get("Location"))
+		})
+	}
 }
