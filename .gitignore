@@ -28,5 +28,9 @@ config.json
 
 # Server runtime files
 ipthing.log
+
+# Local build output and coverage
+/ipthing.net
+coverage.txt
 ipthing.pid
 ipthing

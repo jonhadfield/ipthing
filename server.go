@@ -270,7 +270,7 @@ func rateLimitMiddleware() echo.MiddlewareFunc {
 			switch c.Request().URL.Path {
 			case "/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png",
 				"/android-chrome-192x192.png", "/android-chrome-512x512.png",
-				"/site.webmanifest", "/robots.txt", "/sitemap.xml":
+				"/og-image.png", "/site.webmanifest", "/robots.txt", "/sitemap.xml":
 				return true
 			default:
 				return false
@@ -294,7 +294,7 @@ func clacksOverheadMiddleware() echo.MiddlewareFunc {
 
 // securityHeadersMiddleware sets a tight CSP for the metadata page (inline CSS only, no scripts).
 func securityHeadersMiddleware() echo.MiddlewareFunc {
-	const csp = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+	const csp = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			h := c.Response().Header()
@@ -319,6 +319,7 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
 	e.GET("/android-chrome-192x192.png", app.serveEmbeddedAsset(assetFS, "android-chrome-192x192.png"))
 	e.GET("/android-chrome-512x512.png", app.serveEmbeddedAsset(assetFS, "android-chrome-512x512.png"))
+	e.GET("/og-image.png", app.serveEmbeddedAsset(assetFS, "og-image.png"))
 	e.GET("/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
 	e.GET("/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
 	e.GET("/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))

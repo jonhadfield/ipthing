@@ -185,6 +185,7 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 
 // IsWebBrowser determines if the request comes from a web browser based on User-Agent
 func IsWebBrowser(userAgent string) bool {
-	r := regexp.MustCompile(`.*(Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks).*`)
-	return r.MatchString(userAgent)
+	return webBrowserUA.MatchString(userAgent)
 }
+
+var webBrowserUA = regexp.MustCompile(`Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks`)

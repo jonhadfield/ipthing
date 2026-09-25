@@ -47,6 +47,7 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, `name="description"`)
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "curl https://ipthing.net")
+	assert.Contains(t, body, `content="https://ipthing.net/og-image.png"`)
 }
 
 func TestHandleRoot_BrowserEscapesXSSInUserAgent(t *testing.T) {
@@ -89,6 +90,7 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 	assert.Contains(t, csp, "default-src 'none'")
 	assert.Contains(t, csp, "style-src 'unsafe-inline'")
 	assert.Contains(t, csp, "img-src 'self'")
+	assert.Contains(t, csp, "manifest-src 'self'")
 	assert.Equal(t, "nosniff", rec.Header().Get("X-Content-Type-Options"))
 	assert.Equal(t, "no-referrer", rec.Header().Get("Referrer-Policy"))
 }
@@ -185,6 +187,14 @@ func TestSEOStaticRoutes(t *testing.T) {
 		assert.Contains(t, body, "https://ipthing.net/")
 		assert.Contains(t, body, "https://ipthing.net/privacy")
 		assert.NotContains(t, body, "stats.ipthing.net")
+	})
+
+	t.Run("og-image.png", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/og-image.png", nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
 	})
 
 	t.Run("site.webmanifest", func(t *testing.T) {
