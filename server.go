@@ -149,6 +149,9 @@ func (app *Application) setupServer() *echo.Echo {
 	// Direct-facing deployment: trust the TCP peer only (see AGENTS.md).
 	e.IPExtractor = echo.ExtractIPDirect()
 
+	// 301 www.ipthing.net to the apex before routing so only one host is indexed.
+	e.Pre(middleware.NonWWWRedirect())
+
 	// Configure Echo logger to use syslog
 	configureEchoLogger(e, app.syslogWriter)
 

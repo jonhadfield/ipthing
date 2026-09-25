@@ -370,3 +370,29 @@ func TestBuildResponseData_WithIPInfo(t *testing.T) {
 	assert.Equal(t, "London", data["City"])
 	assert.Equal(t, "Example ISP", data["Org"])
 }
+
+func TestWWWRedirectsToApex(t *testing.T) {
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+
+	app := &Application{
+		handler:  NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil)),
+		template: renderer,
+	}
+	e := app.setupServer()
+
+	req := httptest.NewRequest(http.MethodGet, "/privacy?x=1", nil)
+	req.Host = "www.ipthing.net"
+	req.TLS = &tls.ConnectionState{}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusMovedPermanently, rec.Code)
+	assert.Equal(t, "https://ipthing.net/privacy?x=1", rec.Header().Get("Location"))
+
+	apex := httptest.NewRequest(http.MethodGet, "/privacy", nil)
+	apex.Host = "ipthing.net"
+	apex.TLS = &tls.ConnectionState{}
+	apexRec := httptest.NewRecorder()
+	e.ServeHTTP(apexRec, apex)
+	assert.Equal(t, http.StatusOK, apexRec.Code)
+}
