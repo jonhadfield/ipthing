@@ -108,7 +108,7 @@ func TestBuildHTTPRequest_RecordsContentLength(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	rp := NewRequestProcessor(&NoOpDB{}, false, nil)
-	httpReq := rp.buildHTTPRequest(req, "203.0.113.50")
+	httpReq := rp.buildHTTPRequest(t.Context(), req, "203.0.113.50")
 
 	assert.Equal(t, int64(len(payload)), httpReq.ContentLength)
 	assert.Equal(t, "application/json", httpReq.ContentType)

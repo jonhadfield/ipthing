@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -48,6 +49,7 @@ type Application struct {
 	dbDefined    bool
 	template     *EmbeddedRenderer
 	handler      *Handler
+	tlsHello     *tlsHelloStore
 	syslogWriter syslogSink
 }
 
@@ -105,7 +107,9 @@ func initializeApplication() (*Application, error) {
 	}
 
 	// Initialize request processor and handler
+	tlsHello := newTLSHelloStore()
 	requestProcessor := NewRequestProcessor(db, dbDefined, nil) // logger will be set later
+	requestProcessor.SetTLSHelloStore(tlsHello)
 	handler := NewHandler(requestProcessor)
 	log.Printf("Request handler initialized")
 
@@ -115,6 +119,7 @@ func initializeApplication() (*Application, error) {
 		dbDefined:    dbDefined,
 		template:     template,
 		handler:      handler,
+		tlsHello:     tlsHello,
 		syslogWriter: syslogWriter,
 	}, nil
 }
@@ -240,7 +245,7 @@ func (app *Application) recordNotFound(c echo.Context) {
 	}
 	rp := app.handler.requestProcessor
 	clientIP := rp.extractClientIP(c)
-	httpReq := rp.buildHTTPRequest(c.Request(), clientIP)
+	httpReq := rp.buildHTTPRequest(c.Request().Context(), c.Request(), clientIP)
 	httpReq.StatusCode = http.StatusNotFound
 	httpReq.ResponseFormat = "error"
 	rp.QueueStore(httpReq)
@@ -413,13 +418,13 @@ func (app *Application) startServers() {
 	if app.config.ListenPortHTTPS != 0 {
 		httpsServer = app.setupServer()
 		configureAutoTLS(httpsServer, app.config.HostWhitelist)
-		h3Server = newHTTP3Server(httpsServer, httpsPort)
+		h3Server = newHTTP3Server(httpsServer, httpsPort, app.tlsHello)
 		httpsServer.Use(altSvcMiddleware(h3Server))
 
 		addr := fmt.Sprintf(":%d", httpsPort)
 		go func() {
 			log.Printf("Starting HTTPS server (HTTP/1.1+HTTP/2) on port %d", httpsPort)
-			if err := httpsServer.StartAutoTLS(addr); err != nil && err != http.ErrServerClosed {
+			if err := startHTTPSAutoTLS(httpsServer, addr, app.tlsHello); err != nil && err != http.ErrServerClosed {
 				log.Printf("HTTPS server error: %v", err)
 			}
 		}()
@@ -487,11 +492,43 @@ func configureAutoTLS(e *echo.Echo, hostWhitelist []string) {
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 }
 
-func newHTTP3Server(e *echo.Echo, listenPort int) *http3.Server {
+// startHTTPSAutoTLS is Echo StartAutoTLS plus ClientHello fingerprint capture (JA3/JA4).
+// Echo's StartAutoTLS replaces TLSConfig, so we configure it ourselves.
+func startHTTPSAutoTLS(e *echo.Echo, address string, store *tlsHelloStore) error {
+	s := e.TLSServer
+	cfg := &tls.Config{
+		MinVersion:     tls.VersionTLS12,
+		GetCertificate: e.AutoTLSManager.GetCertificate,
+		GetConfigForClient: func(chi *tls.ClientHelloInfo) (*tls.Config, error) {
+			store.Remember(chi)
+			return nil, nil
+		},
+	}
+	cfg.NextProtos = append(cfg.NextProtos, acme.ALPNProto)
+	if !e.DisableHTTP2 {
+		cfg.NextProtos = append(cfg.NextProtos, "h2")
+	}
+	s.TLSConfig = cfg
+	s.Addr = address
+	prev := s.ConnState
+	s.ConnState = func(c net.Conn, state http.ConnState) {
+		store.ConnState(c, state)
+		if prev != nil {
+			prev(c, state)
+		}
+	}
+	return e.StartServer(s)
+}
+
+func newHTTP3Server(e *echo.Echo, listenPort int, store *tlsHelloStore) *http3.Server {
 	tlsConf := &tls.Config{
 		GetCertificate: e.AutoTLSManager.GetCertificate,
 		NextProtos:     []string{acme.ALPNProto, http3.NextProtoH3},
 		MinVersion:     tls.VersionTLS13,
+		GetConfigForClient: func(chi *tls.ClientHelloInfo) (*tls.Config, error) {
+			store.Remember(chi)
+			return nil, nil
+		},
 	}
 	return &http3.Server{
 		Handler:     e,

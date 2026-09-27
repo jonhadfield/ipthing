@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -48,11 +50,17 @@ func (h *Handler) HandleRoot(c echo.Context) error {
 	return writeErr
 }
 
+// headerEntry is one request header for JSON/HTML (values may be redacted).
+type headerEntry struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
+}
+
 // buildResponseData creates the response data structure from request information
-func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipInfo *IPInfo) map[string]interface{} {
-	// Start with basic request data - using capitalized keys to match template expectations
-	data := map[string]interface{}{
+func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipInfo *IPInfo) map[string]any {
+	data := map[string]any{
 		"IPAddr":         httpReq.IP,
+		"IPFamily":       httpReq.IPFamily,
 		"UserAgent":      req.UserAgent(),
 		"Host":           req.Host,
 		"Accept":         req.Header.Get("Accept"),
@@ -66,28 +74,45 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"Charset":        req.Header.Get("Charset"),
 		"XFF":            req.Header.Get("X-Forwarded-For"),
 		"XRI":            req.Header.Get("X-Real-IP"),
-		// New fields
-		"Proto":         httpReq.Proto,
-		"ContentLength": httpReq.ContentLength,
-		"RemoteAddr":    httpReq.RemoteAddr,
-		"RequestURI":    httpReq.RequestURI,
-		"Scheme":        httpReq.Scheme,
-		// Initialize empty values for fields that templates expect
-		"Country": "",
-		"City":    "",
-		"Org":     "",
-		"Visitor": "",
+		"Proto":          httpReq.Proto,
+		"ContentLength":  httpReq.ContentLength,
+		"RemoteAddr":     httpReq.RemoteAddr,
+		"RequestURI":     httpReq.RequestURI,
+		"Scheme":         httpReq.Scheme,
+		"Country":        "",
+		"City":           "",
+		"Org":            "",
+		"Visitor":        "",
 	}
 
-	// Add TLS information if available
+	if httpReq.PTRHostname != "" {
+		data["PTRHostname"] = httpReq.PTRHostname
+	}
+
 	if httpReq.TLSVersion > 0 {
 		data["TLSVersion"] = getTLSVersionString(httpReq.TLSVersion)
 		data["TLSCipherSuite"] = getTLSCipherSuiteString(httpReq.TLSCipherSuite)
 		data["TLSServerName"] = httpReq.TLSServerName
 		data["TLSNegotiatedProtocol"] = httpReq.TLSNegotiatedProtocol
+		data["TLSDidResume"] = httpReq.TLSDidResume
+		if httpReq.TLSCurve != "" {
+			data["TLSCurve"] = httpReq.TLSCurve
+		}
+		if httpReq.TLSClientSubject != "" {
+			data["TLSClientSubject"] = httpReq.TLSClientSubject
+		}
+	}
+	if httpReq.JA3 != "" {
+		data["JA3"] = httpReq.JA3
+	}
+	if httpReq.JA4 != "" {
+		data["JA4"] = httpReq.JA4
 	}
 
-	// Add Cloudflare specific headers
+	// Claimed forwarding / CDN headers (never trusted for client IP)
+	if cfConnecting := req.Header.Get("Cf-Connecting-Ip"); cfConnecting != "" {
+		data["CfConnectingIP"] = cfConnecting
+	}
 	if cfCountry := req.Header.Get("Cf-IPcountry"); cfCountry != "" {
 		data["Country"] = cfCountry
 	}
@@ -101,78 +126,44 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		data["CFRequestID"] = cfRequestID
 	}
 
-	// Add security headers (Sec-Fetch-*)
-	if secFetchSite := req.Header.Get("Sec-Fetch-Site"); secFetchSite != "" {
-		data["SecFetchSite"] = secFetchSite
+	setIfHeader := func(key, header string) {
+		if v := req.Header.Get(header); v != "" {
+			data[key] = v
+		}
 	}
-	if secFetchMode := req.Header.Get("Sec-Fetch-Mode"); secFetchMode != "" {
-		data["SecFetchMode"] = secFetchMode
-	}
-	if secFetchUser := req.Header.Get("Sec-Fetch-User"); secFetchUser != "" {
-		data["SecFetchUser"] = secFetchUser
-	}
-	if secFetchDest := req.Header.Get("Sec-Fetch-Dest"); secFetchDest != "" {
-		data["SecFetchDest"] = secFetchDest
-	}
+	setIfHeader("SecFetchSite", "Sec-Fetch-Site")
+	setIfHeader("SecFetchMode", "Sec-Fetch-Mode")
+	setIfHeader("SecFetchUser", "Sec-Fetch-User")
+	setIfHeader("SecFetchDest", "Sec-Fetch-Dest")
+	setIfHeader("SecCHUA", "Sec-CH-UA")
+	setIfHeader("SecCHUAMobile", "Sec-CH-UA-Mobile")
+	setIfHeader("SecCHUAPlatform", "Sec-CH-UA-Platform")
+	setIfHeader("SecCHUAArch", "Sec-CH-UA-Arch")
+	setIfHeader("SecCHUAFullVersionList", "Sec-CH-UA-Full-Version-List")
+	setIfHeader("SecCHUAModel", "Sec-CH-UA-Model")
+	setIfHeader("SecCHUABitness", "Sec-CH-UA-Bitness")
+	setIfHeader("SecCHPrefersColorScheme", "Sec-CH-Prefers-Color-Scheme")
+	setIfHeader("SecCHViewportHeight", "Sec-CH-Viewport-Height")
+	setIfHeader("DeviceMemory", "Device-Memory")
+	setIfHeader("ViewportWidth", "Viewport-Width")
+	setIfHeader("DPR", "DPR")
+	setIfHeader("Width", "Width")
+	setIfHeader("UpgradeInsecureRequests", "Upgrade-Insecure-Requests")
+	setIfHeader("SaveData", "Save-Data")
+	setIfHeader("Via", "Via")
+	setIfHeader("Forwarded", "Forwarded")
+	setIfHeader("TrueClientIP", "True-Client-IP")
+	setIfHeader("Connection", "Connection")
+	setIfHeader("CacheControl", "Cache-Control")
+	setIfHeader("Priority", "Priority")
+	setIfHeader("TE", "TE")
 
-	// Add client hints
-	if secCHUA := req.Header.Get("Sec-CH-UA"); secCHUA != "" {
-		data["SecCHUA"] = secCHUA
-	}
-	if secCHUAMobile := req.Header.Get("Sec-CH-UA-Mobile"); secCHUAMobile != "" {
-		data["SecCHUAMobile"] = secCHUAMobile
-	}
-	if secCHUAPlatform := req.Header.Get("Sec-CH-UA-Platform"); secCHUAPlatform != "" {
-		data["SecCHUAPlatform"] = secCHUAPlatform
-	}
-	if secCHUAArch := req.Header.Get("Sec-CH-UA-Arch"); secCHUAArch != "" {
-		data["SecCHUAArch"] = secCHUAArch
-	}
-	if deviceMemory := req.Header.Get("Device-Memory"); deviceMemory != "" {
-		data["DeviceMemory"] = deviceMemory
-	}
-	if viewportWidth := req.Header.Get("Viewport-Width"); viewportWidth != "" {
-		data["ViewportWidth"] = viewportWidth
-	}
-
-	// Add additional security/privacy headers
-	if upgradeInsecure := req.Header.Get("Upgrade-Insecure-Requests"); upgradeInsecure != "" {
-		data["UpgradeInsecureRequests"] = upgradeInsecure
-	}
-	if saveData := req.Header.Get("Save-Data"); saveData != "" {
-		data["SaveData"] = saveData
-	}
-
-	// Add proxy/forwarding headers
-	if via := req.Header.Get("Via"); via != "" {
-		data["Via"] = via
-	}
-	if forwarded := req.Header.Get("Forwarded"); forwarded != "" {
-		data["Forwarded"] = forwarded
-	}
-	if trueClientIP := req.Header.Get("True-Client-IP"); trueClientIP != "" {
-		data["TrueClientIP"] = trueClientIP
-	}
-
-	// Add connection headers
-	if connection := req.Header.Get("Connection"); connection != "" {
-		data["Connection"] = connection
-	}
-	if cacheControl := req.Header.Get("Cache-Control"); cacheControl != "" {
-		data["CacheControl"] = cacheControl
-	}
-
-	// Add request metadata
 	data["Timestamp"] = httpReq.Timestamp.Format("2006-01-02 15:04:05 MST")
-
-	// Add cookie presence (boolean for privacy)
-	if cookie := req.Header.Get("Cookie"); cookie != "" {
-		data["HasCookies"] = true
-	} else {
-		data["HasCookies"] = false
+	data["HasCookies"] = httpReq.HasCookies
+	if httpReq.CookieNames != "" {
+		data["CookieNames"] = strings.Split(httpReq.CookieNames, ",")
 	}
 
-	// Parse and add query parameters
 	if httpReq.QueryParams != "" && httpReq.QueryParams != "{}" {
 		var queryParams map[string][]string
 		if err := json.Unmarshal([]byte(httpReq.QueryParams), &queryParams); err == nil {
@@ -180,7 +171,19 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		}
 	}
 
-	// Override with IP info from geolocation service if available
+	// Full header list (secrets already redacted in stored JSON / headersForStorage)
+	stored := headersForStorage(req.Header)
+	keys := make([]string, 0, len(stored))
+	for k := range stored {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	headers := make([]headerEntry, 0, len(keys))
+	for _, k := range keys {
+		headers = append(headers, headerEntry{Name: k, Values: stored[k]})
+	}
+	data["Headers"] = headers
+
 	if ipInfo != nil {
 		if ipInfo.Country != "" {
 			data["Country"] = ipInfo.Country
@@ -191,7 +194,6 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		if ipInfo.Org != "" {
 			data["Org"] = ipInfo.Org
 		}
-		// Add additional geolocation fields
 		if ipInfo.Region != "" {
 			data["Region"] = ipInfo.Region
 		}

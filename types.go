@@ -31,6 +31,11 @@ type HTTPRequest struct {
 	TLSCipherSuite        uint16
 	TLSServerName         string
 	TLSNegotiatedProtocol string
+	TLSDidResume          bool
+	TLSCurve              string // negotiated key exchange (CurveID.String)
+	TLSClientSubject      string // client cert subject when present (mTLS)
+	JA3                   string
+	JA4                   string
 	// Additional request details
 	Proto         string // HTTP/1.1, HTTP/2.0, etc.
 	ContentLength int64
@@ -38,11 +43,14 @@ type HTTPRequest struct {
 	RequestURI    string
 	Host          string
 	Scheme        string // http or https
+	IPFamily      string // "ipv4" or "ipv6"
+	PTRHostname   string // reverse DNS of client IP (best-effort)
 	// Request body info
 	ContentType string
 	Body        string // Intentionally unused for persistence (privacy)
 	// Inspection / analytics
 	HasCookies     bool
+	CookieNames    string // comma-separated names only; values never stored
 	ClaimedXFF     string // raw X-Forwarded-For (spoofable; not trusted for IP)
 	CfConnectingIP string // Cf-Connecting-Ip (spoofable; not trusted for IP)
 	DurationMs     int64

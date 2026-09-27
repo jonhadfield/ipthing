@@ -76,7 +76,7 @@ func (app *Application) recordRejectedBody(c echo.Context) {
 	}
 	rp := app.handler.requestProcessor
 	clientIP := rp.extractClientIP(c)
-	httpReq := rp.buildHTTPRequest(c.Request(), clientIP)
+	httpReq := rp.buildHTTPRequest(c.Request().Context(), c.Request(), clientIP)
 	httpReq.StatusCode = http.StatusRequestEntityTooLarge
 	httpReq.ResponseFormat = "error"
 	// Prefer claimed Content-Length; if absent (chunked), record the limit-breach size.

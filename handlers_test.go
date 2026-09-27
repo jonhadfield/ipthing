@@ -325,6 +325,51 @@ func TestBuildResponseData_WithTLS(t *testing.T) {
 	assert.Equal(t, "TLS_AES_128_GCM_SHA256", data["TLSCipherSuite"])
 	assert.Equal(t, "example.com", data["TLSServerName"])
 	assert.Equal(t, "h2", data["TLSNegotiatedProtocol"])
+	assert.Equal(t, false, data["TLSDidResume"])
+	headers, ok := data["Headers"].([]headerEntry)
+	require.True(t, ok)
+	_ = headers
+}
+
+func TestBuildResponseData_NewInspectorFields(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Cf-Connecting-Ip", "198.51.100.9")
+	req.Header.Set("Sec-CH-UA-Model", "Pixel")
+	req.Header.Set("Cookie", "a=1; b=2")
+	req.TLS = &tls.ConnectionState{
+		Version:     tls.VersionTLS13,
+		CipherSuite: tls.TLS_AES_128_GCM_SHA256,
+		DidResume:   true,
+		CurveID:     tls.X25519,
+	}
+
+	httpReq := &HTTPRequest{
+		IP:           "203.0.113.50",
+		IPFamily:     "ipv4",
+		PTRHostname:  "host.example.net",
+		Method:       "GET",
+		Path:         "/",
+		TLSVersion:   tls.VersionTLS13,
+		TLSDidResume: true,
+		TLSCurve:     tls.X25519.String(),
+		JA3:          "abc",
+		JA4:          "t13d1516h2_test",
+		HasCookies:   true,
+		CookieNames:  "a,b",
+	}
+
+	handler := NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil))
+	data := handler.buildResponseData(req, httpReq, nil)
+
+	assert.Equal(t, "ipv4", data["IPFamily"])
+	assert.Equal(t, "host.example.net", data["PTRHostname"])
+	assert.Equal(t, "198.51.100.9", data["CfConnectingIP"])
+	assert.Equal(t, "Pixel", data["SecCHUAModel"])
+	assert.Equal(t, true, data["TLSDidResume"])
+	assert.Equal(t, tls.X25519.String(), data["TLSCurve"])
+	assert.Equal(t, "abc", data["JA3"])
+	assert.Equal(t, "t13d1516h2_test", data["JA4"])
+	assert.Equal(t, []string{"a", "b"}, data["CookieNames"])
 }
 
 func TestBuildResponseData_WithCloudflareHeaders(t *testing.T) {

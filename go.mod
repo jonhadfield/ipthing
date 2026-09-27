@@ -3,6 +3,7 @@ module ipthingg
 go 1.26.0
 
 require (
+	github.com/exaring/ja4plus v0.0.3
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.15.4

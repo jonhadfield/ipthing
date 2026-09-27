@@ -90,10 +90,12 @@ func TestBuildHTTPRequestRedactsHeadersAndSkipsBody(t *testing.T) {
 	req.ContentLength = int64(len(`{"password":"secret"}`))
 
 	rp := NewRequestProcessor(&NoOpDB{}, false, nil)
-	httpReq := rp.buildHTTPRequest(req, "203.0.113.50")
+	httpReq := rp.buildHTTPRequest(t.Context(), req, "203.0.113.50")
 
 	assert.Empty(t, httpReq.Body)
 	assert.True(t, httpReq.HasCookies)
+	assert.Equal(t, "a", httpReq.CookieNames)
+	assert.Equal(t, "ipv4", httpReq.IPFamily)
 	assert.Equal(t, "198.51.100.1, 10.0.0.1", httpReq.ClaimedXFF)
 	assert.Equal(t, "203.0.113.9", httpReq.CfConnectingIP)
 	assert.Contains(t, httpReq.Headers, `"Cookie":["[redacted]"]`)

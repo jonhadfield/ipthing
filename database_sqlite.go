@@ -69,11 +69,19 @@ func (s *SQLiteDB) Migrate() error {
 		content_type TEXT,
 		body TEXT,
 		has_cookies INTEGER,
+		cookie_names TEXT,
 		claimed_xff TEXT,
 		cf_connecting_ip TEXT,
 		duration_ms INTEGER,
 		response_format TEXT,
 		status_code INTEGER,
+		tls_did_resume INTEGER,
+		tls_curve TEXT,
+		tls_client_subject TEXT,
+		ja3 TEXT,
+		ja4 TEXT,
+		ip_family TEXT,
+		ptr_hostname TEXT,
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -101,6 +109,14 @@ func (s *SQLiteDB) Migrate() error {
 		`ALTER TABLE http_requests ADD COLUMN duration_ms INTEGER`,
 		`ALTER TABLE http_requests ADD COLUMN response_format TEXT`,
 		`ALTER TABLE http_requests ADD COLUMN status_code INTEGER`,
+		`ALTER TABLE http_requests ADD COLUMN cookie_names TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN tls_did_resume INTEGER`,
+		`ALTER TABLE http_requests ADD COLUMN tls_curve TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN tls_client_subject TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN ja3 TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN ja4 TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN ip_family TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN ptr_hostname TEXT`,
 	} {
 		// SQLite errors if the column already exists; ignore that.
 		_, _ = s.db.Exec(stmt)
@@ -136,16 +152,20 @@ func (s *SQLiteDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
+		tls_did_resume, tls_curve, tls_client_subject, ja3, ja4,
 		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
-		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format, status_code)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		has_cookies, cookie_names, claimed_xff, cf_connecting_ip, duration_ms, response_format, status_code,
+		ip_family, ptr_hostname)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	result, err := s.db.Exec(query, req.IP, req.Method, req.Path, req.UserAgent, req.Referer,
 		req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
+		req.TLSDidResume, req.TLSCurve, req.TLSClientSubject, req.JA3, req.JA4,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body,
-		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat, req.StatusCode)
+		req.HasCookies, req.CookieNames, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat, req.StatusCode,
+		req.IPFamily, req.PTRHostname)
 	if err != nil {
 		return err
 	}

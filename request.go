@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -24,6 +26,7 @@ type RequestProcessor struct {
 	db        Database
 	dbDefined bool
 	logger    echo.Logger
+	tlsHello  *tlsHelloStore
 }
 
 // NewRequestProcessor creates a new request processor
@@ -33,6 +36,11 @@ func NewRequestProcessor(db Database, dbDefined bool, logger echo.Logger) *Reque
 		dbDefined: dbDefined,
 		logger:    logger,
 	}
+}
+
+// SetTLSHelloStore attaches the ClientHello fingerprint store used for JA3/JA4.
+func (rp *RequestProcessor) SetTLSHelloStore(store *tlsHelloStore) {
+	rp.tlsHello = store
 }
 
 // ProcessRequest handles the complete request processing pipeline
@@ -55,7 +63,7 @@ func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInf
 	}
 
 	// Create HTTP request record (storage deferred until response format/latency known)
-	httpReq := rp.buildHTTPRequest(req, clientIP)
+	httpReq := rp.buildHTTPRequest(req.Context(), req, clientIP)
 
 	return httpReq, ipInfo, nil
 }
@@ -67,14 +75,17 @@ func (rp *RequestProcessor) extractClientIP(c echo.Context) string {
 }
 
 // buildHTTPRequest creates an HTTPRequest from the incoming request and client IP
-func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string) *HTTPRequest {
-	headersJSON, _ := json.Marshal(headersForStorage(req.Header))
+func (rp *RequestProcessor) buildHTTPRequest(ctx context.Context, req *http.Request, clientIP string) *HTTPRequest {
+	headersMap := headersForStorage(req.Header)
+	headersJSON, _ := json.Marshal(headersMap)
 
 	queryParams := make(map[string][]string)
 	for k, v := range req.URL.Query() {
 		queryParams[k] = v
 	}
 	queryParamsJSON, _ := json.Marshal(queryParams)
+
+	names := cookieNames(req.Header)
 
 	httpReq := &HTTPRequest{
 		IP:             clientIP,
@@ -92,8 +103,11 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 		Host:           req.Host,
 		ContentType:    req.Header.Get("Content-Type"),
 		HasCookies:     req.Header.Get("Cookie") != "",
+		CookieNames:    strings.Join(names, ","),
 		ClaimedXFF:     req.Header.Get("X-Forwarded-For"),
 		CfConnectingIP: req.Header.Get("Cf-Connecting-Ip"),
+		IPFamily:       ipFamily(clientIP),
+		PTRHostname:    lookupPTR(ctx, clientIP),
 	}
 
 	// Capture TLS information if available
@@ -102,9 +116,23 @@ func (rp *RequestProcessor) buildHTTPRequest(req *http.Request, clientIP string)
 		httpReq.TLSCipherSuite = req.TLS.CipherSuite
 		httpReq.TLSServerName = req.TLS.ServerName
 		httpReq.TLSNegotiatedProtocol = req.TLS.NegotiatedProtocol
+		httpReq.TLSDidResume = req.TLS.DidResume
+		if req.TLS.CurveID != 0 {
+			httpReq.TLSCurve = req.TLS.CurveID.String()
+		}
+		if len(req.TLS.PeerCertificates) > 0 {
+			httpReq.TLSClientSubject = req.TLS.PeerCertificates[0].Subject.String()
+		}
 		httpReq.Scheme = "https"
 	} else {
 		httpReq.Scheme = "http"
+	}
+
+	if rp.tlsHello != nil {
+		if fp, ok := rp.tlsHello.Lookup(req.RemoteAddr); ok {
+			httpReq.JA3 = fp.JA3
+			httpReq.JA4 = fp.JA4
+		}
 	}
 
 	return httpReq

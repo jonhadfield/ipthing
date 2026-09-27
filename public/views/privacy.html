@@ -29,15 +29,15 @@
 <p>IPThing shows you details of the HTTP connection you made to this service (IP address, headers, TLS, and related metadata). That is the product.</p>
 
 <h2>What we store</h2>
-<p>When a database is configured, each inspected request may be recorded for operations, abuse investigation, and aggregate analysis. Typical fields include client IP and geolocation cache, method, path, query parameters, User-Agent, Referer, Host, protocol, declared content length, response status code, TLS details when present, timing, response format, and a copy of request headers with secrets removed.</p>
+<p>When a database is configured, each inspected request may be recorded for operations, abuse investigation, and aggregate analysis. Typical fields include client IP, IP family, optional reverse DNS (PTR), geolocation cache, method, path, query parameters, User-Agent, Referer, Host, protocol, declared content length, response status code, TLS details (including session resume, key exchange, and JA3/JA4 ClientHello fingerprints), cookie names only, timing, response format, and a copy of request headers with secrets removed.</p>
 <p><strong>Request bodies are not stored</strong> (oversized bodies are rejected; only size/status metadata may be recorded).</p>
-<p>Sensitive header values are redacted before persistence, including Authorization, Proxy-Authorization, Cookie, Set-Cookie, X-Api-Key, and X-Auth-Token (stored as <code>[redacted]</code>).</p>
+<p>Sensitive header values are redacted before persistence, including Authorization, Proxy-Authorization, Cookie, Set-Cookie, X-Api-Key, and X-Auth-Token (stored as <code>[redacted]</code>). Forwarding headers such as X-Forwarded-For and Cf-Connecting-Ip are shown as metadata only and are never trusted as the client IP.</p>
 
 <h2>Retention</h2>
 <p>Request and related records are retained indefinitely unless the operator deletes them manually.</p>
 
 <h2>Public aggregate stats</h2>
-<p>A separate project publishes aggregate-only charts and narrative from this data at <a href="https://stats.ipthing.net/">stats.ipthing.net</a>. Source: <a href="https://github.com/jonhadfield/ipthing-analysis">jonhadfield/ipthing-analysis</a>. That report does not publish raw headers or individual client identifiers.</p>
+<p>A separate project publishes aggregate-only charts and narrative from this data at <a href="https://stats.ipthing.net/">stats.ipthing.net</a>. Source: <a href="https://github.com/jonhadfield/ipthing-analysis">jonhadfield/ipthing-analysis</a>. That report does not publish raw headers, full User-Agents tied to individuals, PTR hostnames for single clients, or other row-level identifiers.</p>
 
 <h2>Purpose</h2>
 <p>Processing is for providing the inspection service you requested, securing and operating the service, and understanding usage patterns. If you are in the EEA/UK and have questions about personal data held about your visits, contact the service operator.</p>

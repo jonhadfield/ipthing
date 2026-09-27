@@ -72,11 +72,19 @@ func (m *MariaDB) Migrate() error {
 		content_type VARCHAR(255),
 		body TEXT,
 		has_cookies BOOLEAN,
+		cookie_names TEXT,
 		claimed_xff TEXT,
 		cf_connecting_ip VARCHAR(45),
 		duration_ms BIGINT,
 		response_format VARCHAR(10),
 		status_code INT,
+		tls_did_resume BOOLEAN,
+		tls_curve VARCHAR(64),
+		tls_client_subject TEXT,
+		ja3 VARCHAR(64),
+		ja4 VARCHAR(64),
+		ip_family VARCHAR(8),
+		ptr_hostname VARCHAR(255),
 		FOREIGN KEY (ip) REFERENCES ip_info(ip)
 	);`
 
@@ -104,6 +112,14 @@ func (m *MariaDB) Migrate() error {
 		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS duration_ms BIGINT`,
 		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS response_format VARCHAR(10)`,
 		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS status_code INT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS cookie_names TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_did_resume BOOLEAN`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_curve VARCHAR(64)`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS tls_client_subject TEXT`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS ja3 VARCHAR(64)`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS ja4 VARCHAR(64)`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS ip_family VARCHAR(8)`,
+		`ALTER TABLE http_requests ADD COLUMN IF NOT EXISTS ptr_hostname VARCHAR(255)`,
 	} {
 		if _, err := m.db.Exec(stmt); err != nil {
 			return fmt.Errorf("failed to migrate http_requests columns: %w", err)
@@ -117,16 +133,20 @@ func (m *MariaDB) SaveHTTPRequest(req *HTTPRequest) error {
 	query := `
 	INSERT INTO http_requests (ip, method, path, user_agent, referer, headers, query_params, timestamp,
 		tls_version, tls_cipher_suite, tls_server_name, tls_negotiated_protocol,
+		tls_did_resume, tls_curve, tls_client_subject, ja3, ja4,
 		proto, content_length, remote_addr, request_uri, host, scheme, content_type, body,
-		has_cookies, claimed_xff, cf_connecting_ip, duration_ms, response_format, status_code)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		has_cookies, cookie_names, claimed_xff, cf_connecting_ip, duration_ms, response_format, status_code,
+		ip_family, ptr_hostname)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	result, err := m.db.Exec(query,
 		req.IP, req.Method, req.Path, req.UserAgent, req.Referer, req.Headers, req.QueryParams, req.Timestamp,
 		req.TLSVersion, req.TLSCipherSuite, req.TLSServerName, req.TLSNegotiatedProtocol,
+		req.TLSDidResume, req.TLSCurve, req.TLSClientSubject, req.JA3, req.JA4,
 		req.Proto, req.ContentLength, req.RemoteAddr, req.RequestURI, req.Host, req.Scheme,
 		req.ContentType, req.Body,
-		req.HasCookies, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat, req.StatusCode,
+		req.HasCookies, req.CookieNames, req.ClaimedXFF, req.CfConnectingIP, req.DurationMs, req.ResponseFormat, req.StatusCode,
+		req.IPFamily, req.PTRHostname,
 	)
 	if err != nil {
 		return err

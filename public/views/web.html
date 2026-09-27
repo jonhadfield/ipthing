@@ -113,6 +113,18 @@
         <td>IP Address</td>
         <td>{{ .IPAddr }}</td>
     </tr>
+    {{ if .IPFamily }}
+    <tr>
+        <td>IP Family</td>
+        <td>{{ .IPFamily }}</td>
+    </tr>
+    {{ end }}
+    {{ if .PTRHostname }}
+    <tr>
+        <td>Reverse DNS (PTR)</td>
+        <td>{{ .PTRHostname }}</td>
+    </tr>
+    {{ end }}
     {{ if .Hostname }}
     <tr>
         <td>Hostname</td>
@@ -174,6 +186,12 @@
         <td>X-Real-IP</td>
         <td>{{ .XRI }}</td>
     </tr>
+    {{ if .CfConnectingIP }}
+    <tr>
+        <td>Cf-Connecting-Ip</td>
+        <td>{{ .CfConnectingIP }}</td>
+    </tr>
+    {{ end }}
     {{ if .TrueClientIP }}
     <tr>
         <td>True-Client-IP</td>
@@ -278,6 +296,36 @@
         <td>{{ .SecCHUAArch }}</td>
     </tr>
     {{ end }}
+    {{ if .SecCHUAFullVersionList }}
+    <tr>
+        <td>Sec-CH-UA-Full-Version-List</td>
+        <td>{{ .SecCHUAFullVersionList }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHUAModel }}
+    <tr>
+        <td>Sec-CH-UA-Model</td>
+        <td>{{ .SecCHUAModel }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHUABitness }}
+    <tr>
+        <td>Sec-CH-UA-Bitness</td>
+        <td>{{ .SecCHUABitness }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHPrefersColorScheme }}
+    <tr>
+        <td>Sec-CH-Prefers-Color-Scheme</td>
+        <td>{{ .SecCHPrefersColorScheme }}</td>
+    </tr>
+    {{ end }}
+    {{ if .SecCHViewportHeight }}
+    <tr>
+        <td>Sec-CH-Viewport-Height</td>
+        <td>{{ .SecCHViewportHeight }}</td>
+    </tr>
+    {{ end }}
     {{ if .DeviceMemory }}
     <tr>
         <td>Device Memory (GB)</td>
@@ -288,6 +336,30 @@
     <tr>
         <td>Viewport Width</td>
         <td>{{ .ViewportWidth }}</td>
+    </tr>
+    {{ end }}
+    {{ if .DPR }}
+    <tr>
+        <td>DPR</td>
+        <td>{{ .DPR }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Width }}
+    <tr>
+        <td>Width</td>
+        <td>{{ .Width }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Priority }}
+    <tr>
+        <td>Priority</td>
+        <td>{{ .Priority }}</td>
+    </tr>
+    {{ end }}
+    {{ if .TE }}
+    <tr>
+        <td>TE</td>
+        <td>{{ .TE }}</td>
     </tr>
     {{ end }}
     <tr>
@@ -330,6 +402,12 @@
         <td>Has Cookies</td>
         <td>{{ .HasCookies }}</td>
     </tr>
+    {{ if .CookieNames }}
+    <tr>
+        <td>Cookie Names</td>
+        <td>{{ range $i, $n := .CookieNames }}{{ if $i }}, {{ end }}{{ $n }}{{ end }}</td>
+    </tr>
+    {{ end }}
     {{ if .Via }}
     <tr>
         <td>Via (Proxy Chain)</td>
@@ -385,6 +463,45 @@
         <td>TLS Negotiated Protocol</td>
         <td>{{ .TLSNegotiatedProtocol }}</td>
     </tr>
+    <tr>
+        <td>TLS Session Resumed</td>
+        <td>{{ .TLSDidResume }}</td>
+    </tr>
+    {{ if .TLSCurve }}
+    <tr>
+        <td>TLS Key Exchange</td>
+        <td>{{ .TLSCurve }}</td>
+    </tr>
+    {{ end }}
+    {{ if .TLSClientSubject }}
+    <tr>
+        <td>TLS Client Certificate</td>
+        <td>{{ .TLSClientSubject }}</td>
+    </tr>
+    {{ end }}
+    {{ end }}
+    {{ if .JA3 }}
+    <tr>
+        <td>JA3</td>
+        <td>{{ .JA3 }}</td>
+    </tr>
+    {{ end }}
+    {{ if .JA4 }}
+    <tr>
+        <td>JA4</td>
+        <td>{{ .JA4 }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Headers }}
+    <tr>
+        <td colspan="2">Request Headers</td>
+    </tr>
+    {{ range .Headers }}
+    <tr>
+        <td>{{ .Name }}</td>
+        <td>{{ range $i, $v := .Values }}{{ if $i }}, {{ end }}{{ $v }}{{ end }}</td>
+    </tr>
+    {{ end }}
     {{ end }}
     </tbody>
 </table>
