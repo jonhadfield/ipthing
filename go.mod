@@ -1,6 +1,6 @@
 module ipthingg
 
-go 1.26.0
+go 1.26.6
 
 require (
 	github.com/exaring/ja4plus v0.0.3

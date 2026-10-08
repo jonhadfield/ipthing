@@ -20,7 +20,10 @@ fmt:
 lint:
 	golangci-lint run ./...
 
-ci: lint test
+govulncheck: ## Scan dependencies for known vulnerabilities
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+ci: lint test govulncheck
 
 BUILD_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)
 BUILD_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
@@ -79,8 +82,7 @@ build-docker:
 	docker tag ${IMG} ${LATEST}
 	docker tag ${LATEST} ipthing:latest
 
-#release-docker: build-docker scan-image docker-push
-release-docker: build-docker docker-push
+release-docker: build-docker scan-image docker-push
 
 docker-push: login
 	docker --log-level debug push ${IMG}

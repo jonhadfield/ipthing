@@ -24,12 +24,15 @@ Every hostname the site serves over HTTPS, including `www.ipthing.net`, must be 
 
 These limits exist to keep a public inspector from being an easy resource sink:
 
-- Rate limit: **5 req/s per IP**, burst **10** (favicon paths skipped)
+- Rate limit: **5 req/s per IP**, burst **10** (favicon paths skipped); **one shared store** across HTTP + HTTPS/H3 listeners
 - Body size: **1 MiB** max; request bodies are inspected for size only and **never stored**
+- Async DB persist: bounded queue (**256**) with **4** workers; drops under pressure rather than unbounded goroutines
 - Server timeouts: **5s** read headers, **10s** read, **15s** write, **60s** idle (+ HTTP/3 idle 60s)
 - Handler bound: Echo `ContextTimeout` **8s**; prefer this over Echo’s discouraged `Timeout` middleware
 - ipinfo.io: at most **8** concurrent API fetches; DB geo cache TTL **24h** (stale cache returned on fetch failure)
 - XSS: responses use `html/template` escaping plus a tight CSP (inline CSS only, no scripts)
+- Operational request logs omit client IP, User-Agent, and query strings (analytics stay in the DB when configured)
+- CI runs tests + `govulncheck`; `make release-docker` scans the image with Trivy before push
 
 Crawl aids: `/robots.txt`, `/sitemap.xml`, and HTML meta/canonical on `/` and `/privacy`. Register the site in Google Search Console after deploy. Responses include `X-IPThing-Version: <tag>-<sha>` (from build ldflags).
 

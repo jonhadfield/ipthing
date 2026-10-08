@@ -204,7 +204,7 @@ func TestApplyServerTimeouts(t *testing.T) {
 func TestRateLimitMiddleware_PerIP(t *testing.T) {
 	e := echo.New()
 	e.IPExtractor = echo.ExtractIPDirect()
-	e.Use(rateLimitMiddleware())
+	e.Use(rateLimitMiddleware(newRateLimiterStore()))
 	e.Any("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok")
 	})
@@ -240,4 +240,36 @@ func TestRateLimitMiddleware_PerIP(t *testing.T) {
 	recFav := httptest.NewRecorder()
 	e.ServeHTTP(recFav, reqFav)
 	assert.Equal(t, http.StatusNoContent, recFav.Code)
+}
+
+func TestRateLimitMiddleware_SharedStoreAcrossListeners(t *testing.T) {
+	store := newRateLimiterStore()
+	handler := func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	}
+
+	e1 := echo.New()
+	e1.IPExtractor = echo.ExtractIPDirect()
+	e1.Use(rateLimitMiddleware(store))
+	e1.Any("/", handler)
+
+	e2 := echo.New()
+	e2.IPExtractor = echo.ExtractIPDirect()
+	e2.Use(rateLimitMiddleware(store))
+	e2.Any("/", handler)
+
+	for i := range 10 {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = "203.0.113.50:1"
+		rec := httptest.NewRecorder()
+		e1.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code, "e1 request %d", i+1)
+	}
+
+	// Same IP on the other listener must share the burst budget.
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.50:1"
+	rec := httptest.NewRecorder()
+	e2.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 }

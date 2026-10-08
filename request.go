@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -13,6 +15,12 @@ import (
 
 // maxLoggedPathLen caps Path/RequestURI stored for analytics (scanner junk URLs).
 const maxLoggedPathLen = 512
+
+// Bounded async persistence: under load, drop rather than spawn unbounded goroutines.
+const (
+	storeQueueSize = 256
+	storeWorkers   = 4
+)
 
 func truncateForLog(s string, limit int) string {
 	if limit <= 0 || len(s) <= limit {
@@ -23,19 +31,34 @@ func truncateForLog(s string, limit int) string {
 
 // RequestProcessor handles request processing and IP extraction
 type RequestProcessor struct {
-	db        Database
-	dbDefined bool
-	logger    echo.Logger
-	tlsHello  *tlsHelloStore
+	db          Database
+	dbDefined   bool
+	logger      echo.Logger
+	tlsHello    *tlsHelloStore
+	storeCh     chan *HTTPRequest
+	storeWG     sync.WaitGroup
+	storeMu     sync.RWMutex
+	storeClosed atomic.Bool
 }
 
 // NewRequestProcessor creates a new request processor
 func NewRequestProcessor(db Database, dbDefined bool, logger echo.Logger) *RequestProcessor {
-	return &RequestProcessor{
+	rp := &RequestProcessor{
 		db:        db,
 		dbDefined: dbDefined,
 		logger:    logger,
 	}
+	if dbDefined {
+		rp.storeCh = make(chan *HTTPRequest, storeQueueSize)
+		for range storeWorkers {
+			rp.storeWG.Go(func() {
+				for httpReq := range rp.storeCh {
+					rp.storeRequestAsync(httpReq)
+				}
+			})
+		}
+	}
+	return rp
 }
 
 // SetTLSHelloStore attaches the ClientHello fingerprint store used for JA3/JA4.
@@ -50,15 +73,13 @@ func (rp *RequestProcessor) ProcessRequest(c echo.Context) (*HTTPRequest, *IPInf
 	// Extract client IP from the TCP peer (no proxy headers)
 	clientIP := rp.extractClientIP(c)
 
-	// Fetch IP geolocation info
+	// Fetch IP geolocation info (do not log full geo/PII at Info — DB holds it when configured)
 	var ipInfo *IPInfo
 	if clientIP != "" {
 		var err error
 		ipInfo, err = getOrFetchIPInfo(req.Context(), rp.db, clientIP)
 		if err != nil {
-			rp.logger.Errorf("Failed to get IP info: %v", err)
-		} else {
-			rp.logger.Infof("IP info for %s: %+v", clientIP, ipInfo)
+			rp.logErrorf("Failed to get IP info: %v", err)
 		}
 	}
 
@@ -161,12 +182,57 @@ func headersForStorage(h http.Header) map[string][]string {
 	return out
 }
 
-// QueueStore persists the request asynchronously when a database is configured.
+// QueueStore enqueues the request for bounded async persistence when a database is configured.
+// If the queue is full, the write is dropped so request handling stays non-blocking.
 func (rp *RequestProcessor) QueueStore(httpReq *HTTPRequest) {
-	if !rp.dbDefined || httpReq == nil || httpReq.IP == "" {
+	if !rp.dbDefined || httpReq == nil || httpReq.IP == "" || rp.storeCh == nil {
 		return
 	}
-	go rp.storeRequestAsync(httpReq)
+
+	rp.storeMu.RLock()
+	defer rp.storeMu.RUnlock()
+	if rp.storeClosed.Load() {
+		return
+	}
+
+	select {
+	case rp.storeCh <- httpReq:
+	default:
+		rp.logWarnf("store queue full; dropping request persist")
+	}
+}
+
+// Close stops store workers after draining the queue. Safe to call once; no-op if unused.
+func (rp *RequestProcessor) Close() {
+	if rp.storeCh == nil {
+		return
+	}
+	rp.storeMu.Lock()
+	if rp.storeClosed.Swap(true) {
+		rp.storeMu.Unlock()
+		return
+	}
+	close(rp.storeCh)
+	rp.storeMu.Unlock()
+	rp.storeWG.Wait()
+}
+
+func (rp *RequestProcessor) logErrorf(format string, args ...any) {
+	if rp.logger != nil {
+		rp.logger.Errorf(format, args...)
+	}
+}
+
+func (rp *RequestProcessor) logWarnf(format string, args ...any) {
+	if rp.logger != nil {
+		rp.logger.Warnf(format, args...)
+	}
+}
+
+func (rp *RequestProcessor) logDebugf(format string, args ...any) {
+	if rp.logger != nil {
+		rp.logger.Debugf(format, args...)
+	}
 }
 
 // storeRequestAsync stores the request in the database asynchronously after duplicate checking
@@ -182,12 +248,12 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 	// Check for duplicates within the last 5 minutes
 	isDuplicate, err := rp.db.IsDuplicateRequest(fingerprint, 5*time.Minute)
 	if err != nil {
-		rp.logger.Errorf("Failed to check for duplicate request: %v", err)
+		rp.logErrorf("Failed to check for duplicate request: %v", err)
 		return
 	}
 
 	if isDuplicate {
-		rp.logger.Debugf("Skipping duplicate request from %s to %s", httpReq.IP, httpReq.Path)
+		rp.logDebugf("Skipping duplicate request path=%s", httpReq.Path)
 		return
 	}
 
@@ -200,14 +266,14 @@ func (rp *RequestProcessor) storeRequestAsync(httpReq *HTTPRequest) {
 			LastUpdate: time.Now(),
 		}
 		if err := rp.db.SaveIPInfo(minimalIPInfo); err != nil {
-			rp.logger.Errorf("Failed to save minimal IP info: %v", err)
+			rp.logErrorf("Failed to save minimal IP info: %v", err)
 			return
 		}
 	}
 
 	// Save HTTP request
 	if err := rp.db.SaveHTTPRequest(httpReq); err != nil {
-		rp.logger.Errorf("Failed to save HTTP request: %v", err)
+		rp.logErrorf("Failed to save HTTP request: %v", err)
 	}
 }
 

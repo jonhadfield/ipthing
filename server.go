@@ -44,13 +44,14 @@ func main() {
 
 // Application holds all application dependencies
 type Application struct {
-	config       *Config
-	db           Database
-	dbDefined    bool
-	template     *EmbeddedRenderer
-	handler      *Handler
-	tlsHello     *tlsHelloStore
-	syslogWriter syslogSink
+	config           *Config
+	db               Database
+	dbDefined        bool
+	template         *EmbeddedRenderer
+	handler          *Handler
+	tlsHello         *tlsHelloStore
+	syslogWriter     syslogSink
+	rateLimiterStore middleware.RateLimiterStore
 }
 
 // initializeApplication sets up all application dependencies
@@ -114,19 +115,24 @@ func initializeApplication() (*Application, error) {
 	log.Printf("Request handler initialized")
 
 	return &Application{
-		config:       config,
-		db:           db,
-		dbDefined:    dbDefined,
-		template:     template,
-		handler:      handler,
-		tlsHello:     tlsHello,
-		syslogWriter: syslogWriter,
+		config:           config,
+		db:               db,
+		dbDefined:        dbDefined,
+		template:         template,
+		handler:          handler,
+		tlsHello:         tlsHello,
+		syslogWriter:     syslogWriter,
+		rateLimiterStore: newRateLimiterStore(),
 	}, nil
 }
 
 // cleanup closes database connections and other resources
 func (app *Application) cleanup() {
 	log.Printf("Starting application shutdown")
+
+	if app.handler != nil && app.handler.requestProcessor != nil {
+		app.handler.requestProcessor.Close()
+	}
 
 	if app.dbDefined && app.db != nil {
 		log.Printf("Closing database connection")
@@ -163,28 +169,30 @@ func (app *Application) setupServer() *echo.Echo {
 	// Set the logger for request processor now that we have the echo instance
 	app.handler.requestProcessor.logger = e.Logger
 
-	// Configure middleware
+	// Configure middleware. Avoid logging query strings, User-Agent, or client IP
+	// in operational logs (those live in the DB for analytics when configured).
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus:    true,
-		LogURI:       true,
-		LogError:     true,
-		LogMethod:    true,
-		LogRemoteIP:  true,
-		LogLatency:   true,
-		LogUserAgent: true,
+		LogStatus:  true,
+		LogURI:     true,
+		LogError:   true,
+		LogMethod:  true,
+		LogLatency: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			// Log detailed request information
-			e.Logger.Infof("REQUEST: method=%s uri=%s status=%d remote_ip=%s latency=%v user_agent=%s",
-				v.Method, v.URI, v.Status, v.RemoteIP, v.Latency, v.UserAgent)
+			path := v.URI
+			if i := strings.IndexByte(path, '?'); i >= 0 {
+				path = path[:i]
+			}
+			e.Logger.Infof("REQUEST: method=%s path=%s status=%d latency=%v",
+				v.Method, path, v.Status, v.Latency)
 			if v.Error != nil {
-				e.Logger.Errorf("REQUEST_ERROR: method=%s uri=%s error=%v", v.Method, v.URI, v.Error)
+				e.Logger.Errorf("REQUEST_ERROR: method=%s path=%s error=%v", v.Method, path, v.Error)
 			}
 			return nil
 		},
 	}))
 	e.Use(middleware.Recover())
 	e.Use(versionHeaderMiddleware())
-	e.Use(rateLimitMiddleware())
+	e.Use(rateLimitMiddleware(app.sharedRateLimiterStore()))
 	// Bound handler work (e.g. ipinfo.io). Slow-client DoS is handled by server read timeouts.
 	e.Use(middleware.ContextTimeout(8 * time.Second))
 	e.Use(clacksOverheadMiddleware())
@@ -262,13 +270,29 @@ func (app *Application) databaseMiddleware() echo.MiddlewareFunc {
 	}
 }
 
-// rateLimitMiddleware caps each client IP at 5 requests per second with a burst of 10.
-// Static assets are skipped so a browser page load is not blocked by favicon fetches.
-func rateLimitMiddleware() echo.MiddlewareFunc {
-	store := middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
+// newRateLimiterStore creates the shared in-memory limiter used by all listeners.
+func newRateLimiterStore() middleware.RateLimiterStore {
+	return middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
 		Rate:  5,
 		Burst: 10,
 	})
+}
+
+// sharedRateLimiterStore returns the app-wide store so HTTP and HTTPS/H3 share one budget.
+func (app *Application) sharedRateLimiterStore() middleware.RateLimiterStore {
+	if app.rateLimiterStore == nil {
+		app.rateLimiterStore = newRateLimiterStore()
+	}
+	return app.rateLimiterStore
+}
+
+// rateLimitMiddleware caps each client IP at 5 requests per second with a burst of 10.
+// Static assets are skipped so a browser page load is not blocked by favicon fetches.
+// Pass the same store to every Echo instance so listeners share one per-IP budget.
+func rateLimitMiddleware(store middleware.RateLimiterStore) echo.MiddlewareFunc {
+	if store == nil {
+		store = newRateLimiterStore()
+	}
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: store,
 		Skipper: func(c echo.Context) bool {
