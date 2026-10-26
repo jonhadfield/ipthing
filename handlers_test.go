@@ -48,6 +48,8 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "curl https://ipthing.net")
 	assert.Contains(t, body, `content="https://ipthing.net/og-image.png"`)
+	assert.Contains(t, body, "https://stats.ipthing.net/")
+	assert.Contains(t, body, "https://github.com/jonhadfield/ipthing")
 }
 
 func TestHandleRoot_BrowserEscapesXSSInUserAgent(t *testing.T) {
