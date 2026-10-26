@@ -1,0 +1,72 @@
+{{define "tls"}}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TLS, HTTP/3, JA3 and JA4 fingerprints — IPThing</title>
+    <meta name="description" content="See your TLS version, cipher, ALPN, HTTP/3, and JA3/JA4 ClientHello fingerprints. These hashes describe software stacks, not individual people.">
+    <link rel="canonical" href="https://ipthing.net/tls">
+    <meta property="og:title" content="TLS, HTTP/3, JA3 and JA4 fingerprints — IPThing">
+    <meta property="og:description" content="Inspect the TLS handshake your client offered: version, cipher, ALPN, JA3 and JA4. HTTP/3 is served on UDP 443.">
+    <meta property="og:url" content="https://ipthing.net/tls">
+    <meta property="og:image:alt" content="IPThing TLS and JA4 fingerprint inspector">
+    {{template "docs-style"}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "How do I see my JA3 or JA4 fingerprint?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Open https://ipthing.net/ over HTTPS. The page shows TLS version, cipher, ALPN, JA3, and JA4 derived from your ClientHello. curl https://ipthing.net returns the same fields as JSON."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "What is a JA4 fingerprint?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "JA4 hashes details of the TLS ClientHello (version, ciphers, extensions, ALPN). Many clients that share a TLS library produce the same hash. It identifies a software cluster, not a person."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Does IPThing support HTTP/3?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes. HTTPS is HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on UDP 443 and is advertised with Alt-Svc. The Protocol and TLS negotiated protocol fields show what your client chose."
+                }
+            }
+        ]
+    }
+    </script>
+</head>
+<body>
+<h1>TLS, HTTP/3, JA3 and JA4</h1>
+<p>Load <a href="https://ipthing.net/">ipthing.net</a> over HTTPS to see the handshake this server negotiated with your client: TLS version, cipher suite, ALPN, key exchange, and JA3/JA4 fingerprints from the ClientHello.</p>
+
+<h2>What the live page reports</h2>
+<ul>
+    <li>TLS version and cipher suite</li>
+    <li>Negotiated protocol (for example <code>h2</code> or <code>h3</code>)</li>
+    <li>Whether the TLS session was resumed</li>
+    <li>Key-exchange curve when known (for example X25519)</li>
+    <li>JA3 and JA4 hashes of the ClientHello</li>
+</ul>
+<p>Plain HTTP has no TLS rows. <a href="/curl">curl</a> over HTTPS includes the same fields in JSON.</p>
+
+<h2>JA3 and JA4 are not a unique ID</h2>
+<p>JA3 (older) and JA4 (current) summarise how a TLS library builds its ClientHello. Browsers that share a stack share a hash; so do many copies of curl. They are useful to tell “browser-like” from “script-like” traffic. They do not identify a person. Aggregate JA3/JA4 frequencies are on <a href="https://stats.ipthing.net/">stats.ipthing.net</a> without joining hashes back to individual IPs.</p>
+
+<h2>HTTP/3</h2>
+<p>HTTPS serves HTTP/1.1 and HTTP/2 on <strong>TCP 443</strong>. HTTP/3 (QUIC) listens on <strong>UDP 443</strong> and is advertised with <code>Alt-Svc</code>. If UDP/443 is blocked on the path, you will still get HTTP/2. The Protocol field on the live page is what was actually used.</p>
+
+<p>Related: <a href="/headers">request headers</a> your client sent alongside the handshake.</p>
+
+{{template "site-footer"}}
+</body>
+</html>
+{{end}}

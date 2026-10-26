@@ -5,6 +5,9 @@ HTTP request inspector. Open **[https://ipthing.net](https://ipthing.net)** in a
 | | URL |
 | --- | --- |
 | Live service | **[https://ipthing.net](https://ipthing.net)** |
+| curl / JSON | [https://ipthing.net/curl](https://ipthing.net/curl) |
+| Request headers | [https://ipthing.net/headers](https://ipthing.net/headers) |
+| TLS / JA3 / JA4 | [https://ipthing.net/tls](https://ipthing.net/tls) |
 | Traffic stats | **[https://stats.ipthing.net](https://stats.ipthing.net)** |
 | Privacy | [https://ipthing.net/privacy](https://ipthing.net/privacy) |
 | Source | [github.com/jonhadfield/ipthing](https://github.com/jonhadfield/ipthing) |

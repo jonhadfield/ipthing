@@ -1,0 +1,83 @@
+{{define "curl"}}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>curl: get your public IP as JSON — IPThing</title>
+    <meta name="description" content="Get your public IP with curl. ipthing.net returns JSON for CLI clients: address, location, headers, and TLS. Use -4 or -6 for IPv4 or IPv6.">
+    <link rel="canonical" href="https://ipthing.net/curl">
+    <meta property="og:title" content="curl: get your public IP as JSON — IPThing">
+    <meta property="og:description" content="curl https://ipthing.net returns JSON with your public IP, location, headers and TLS. Force IPv4 or IPv6 with -4 or -6.">
+    <meta property="og:url" content="https://ipthing.net/curl">
+    <meta property="og:image:alt" content="IPThing curl JSON examples">
+    {{template "docs-style"}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "How do I get my public IP with curl?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Run curl https://ipthing.net. Non-browser clients receive JSON. The IPAddr field is your public address. Use jq -r .IPAddr to print only that value."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How do I check IPv4 or IPv6 with curl?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Use curl -4 https://ipthing.net for IPv4 and curl -6 https://ipthing.net for IPv6. Plain curl follows whichever family your resolver prefers."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Why does curl get JSON instead of HTML?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "IPThing serves HTML to browser User-Agents and pretty-printed JSON to everything else, including curl and wget. The live inspector in a browser is https://ipthing.net/."
+                }
+            }
+        ]
+    }
+    </script>
+</head>
+<body>
+<h1>Get your public IP with curl</h1>
+<p>From a terminal, <a href="https://ipthing.net/">ipthing.net</a> returns JSON: your public IP, approximate location, the headers you sent, and TLS details. Browsers still get HTML on the same URL.</p>
+
+<pre>curl https://ipthing.net</pre>
+
+<h2>IPv4 and IPv6</h2>
+<pre>curl -4 https://ipthing.net
+curl -6 https://ipthing.net</pre>
+<p>Without <code>-4</code> or <code>-6</code>, curl uses whichever address family DNS prefers. IPThing accepts both.</p>
+
+<h2>HTTP without TLS</h2>
+<pre>curl http://ipthing.net</pre>
+<p>Plain HTTP stays available on purpose, for scripts and images that have no CA bundle. There is no redirect to HTTPS.</p>
+
+<h2>Print only the address</h2>
+<pre>curl -s https://ipthing.net | jq -r .IPAddr</pre>
+<p>Field names are PascalCase and match the labels on the HTML page. <code>IPAddr</code> is the TCP or QUIC peer — not <code>X-Forwarded-For</code>.</p>
+
+<h2>Example JSON</h2>
+<pre>{
+  "IPAddr": "203.0.113.50",
+  "IPFamily": "ipv4",
+  "Country": "US",
+  "Org": "AS65536 Example ISP",
+  "UserAgent": "curl/8.0.0",
+  "Proto": "HTTP/2.0",
+  "TLSVersion": "TLS 1.3",
+  "JA4": "t13d…",
+  "XFF": ""
+}</pre>
+<p>A browser User-Agent (<code>Mozilla</code>, <code>AppleWebKit</code>, <code>Gecko</code>, …) receives HTML instead. <a href="/headers">Request headers</a> and <a href="/tls">TLS / JA3 / JA4</a> are documented separately. See live traffic mix at <a href="https://stats.ipthing.net/">stats.ipthing.net</a>.</p>
+
+{{template "site-footer"}}
+</body>
+</html>
+{{end}}

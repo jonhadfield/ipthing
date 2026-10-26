@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -122,6 +123,40 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "https://ipthing.net/privacy")
 }
 
+func TestDocsPages(t *testing.T) {
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+
+	app := &Application{
+		handler:  NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil)),
+		template: renderer,
+	}
+	e := app.setupServer()
+
+	pages := []struct {
+		path        string
+		canonical   string
+		mustContain string
+	}{
+		{"/curl", "https://ipthing.net/curl", "curl https://ipthing.net"},
+		{"/headers", "https://ipthing.net/headers", "X-Forwarded-For"},
+		{"/tls", "https://ipthing.net/tls", "JA4"},
+	}
+	for _, page := range pages {
+		t.Run(page.path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, page.path, nil)
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, req)
+			assert.Equal(t, http.StatusOK, rec.Code)
+			body := rec.Body.String()
+			assert.Contains(t, body, `rel="canonical"`)
+			assert.Contains(t, body, page.canonical)
+			assert.Contains(t, body, page.mustContain)
+			assert.Contains(t, body, "https://stats.ipthing.net/")
+		})
+	}
+}
+
 func TestNotFoundPathIsRecorded(t *testing.T) {
 	renderer, err := NewEmbeddedRenderer()
 	require.NoError(t, err)
@@ -185,10 +220,39 @@ func TestSEOStaticRoutes(t *testing.T) {
 		e.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Header().Get("Content-Type"), "application/xml")
-		body := rec.Body.String()
-		assert.Contains(t, body, "https://ipthing.net/")
-		assert.Contains(t, body, "https://ipthing.net/privacy")
-		assert.NotContains(t, body, "stats.ipthing.net")
+
+		var doc struct {
+			URLs []struct {
+				Loc string `xml:"loc"`
+			} `xml:"url"`
+		}
+		require.NoError(t, xml.Unmarshal(rec.Body.Bytes(), &doc))
+
+		got := make([]string, 0, len(doc.URLs))
+		for _, u := range doc.URLs {
+			got = append(got, u.Loc)
+		}
+		want := []string{
+			"https://ipthing.net/",
+			"https://ipthing.net/curl",
+			"https://ipthing.net/headers",
+			"https://ipthing.net/tls",
+			"https://ipthing.net/privacy",
+		}
+		assert.Equal(t, want, got, "sitemap locs must match indexable HTML routes")
+
+		for _, loc := range got {
+			path := strings.TrimPrefix(loc, "https://ipthing.net")
+			if path == "" {
+				path = "/"
+			}
+			pageReq := httptest.NewRequest(http.MethodGet, path, nil)
+			pageReq.Header.Set("User-Agent", "Mozilla/5.0")
+			pageRec := httptest.NewRecorder()
+			e.ServeHTTP(pageRec, pageReq)
+			assert.Equal(t, http.StatusOK, pageRec.Code, "sitemap loc %s must serve 200", loc)
+			assert.Contains(t, pageRec.Body.String(), `rel="canonical"`)
+		}
 	})
 
 	t.Run("og-image.png", func(t *testing.T) {

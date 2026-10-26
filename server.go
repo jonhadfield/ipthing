@@ -352,7 +352,10 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
 	e.GET("/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
 	e.GET("/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))
-	e.GET("/privacy", app.privacyHandler)
+	e.GET("/privacy", app.viewHandler("privacy"))
+	e.GET("/curl", app.viewHandler("curl"))
+	e.GET("/headers", app.viewHandler("headers"))
+	e.GET("/tls", app.viewHandler("tls"))
 
 	// Accept Echo's built-in Any methods plus common scanner/WebDAV verbs.
 	// Truly unknown methods still reach rootMethodFallback on 405 for "/".
@@ -360,9 +363,11 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.Match(extraRootMethods, "/", app.rootHandler)
 }
 
-// privacyHandler serves the short privacy notice.
-func (app *Application) privacyHandler(c echo.Context) error {
-	return c.Render(http.StatusOK, "privacy", nil)
+// viewHandler renders a named HTML template with no request data.
+func (app *Application) viewHandler(name string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return c.Render(http.StatusOK, name, nil)
+	}
 }
 
 // serveEmbeddedAsset creates a handler for serving embedded static assets
