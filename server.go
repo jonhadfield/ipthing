@@ -352,10 +352,11 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.GET("/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
 	e.GET("/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
 	e.GET("/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))
-	e.GET("/privacy", app.viewHandler("privacy"))
-	e.GET("/curl", app.viewHandler("curl"))
-	e.GET("/headers", app.viewHandler("headers"))
-	e.GET("/tls", app.viewHandler("tls"))
+	// GET+HEAD so crawlers that probe with HEAD do not get 405 on indexable HTML.
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/privacy", app.viewHandler("privacy"))
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/curl", app.viewHandler("curl"))
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/headers", app.viewHandler("headers"))
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/tls", app.viewHandler("tls"))
 
 	// Accept Echo's built-in Any methods plus common scanner/WebDAV verbs.
 	// Truly unknown methods still reach rootMethodFallback on 405 for "/".
@@ -366,6 +367,12 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 // viewHandler renders a named HTML template with no request data.
 func (app *Application) viewHandler(name string) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		if c.Request().Method == http.MethodHead {
+			h := c.Response().Header()
+			h.Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
+			h.Set(echo.HeaderContentLength, "0")
+			return c.NoContent(http.StatusOK)
+		}
 		return c.Render(http.StatusOK, name, nil)
 	}
 }

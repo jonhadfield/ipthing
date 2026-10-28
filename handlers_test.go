@@ -51,6 +51,16 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, `content="https://ipthing.net/og-image.png"`)
 	assert.Contains(t, body, "https://stats.ipthing.net/")
 	assert.Contains(t, body, "https://github.com/jonhadfield/ipthing")
+	assert.Contains(t, body, `"@type": "FAQPage"`)
+	assert.Contains(t, body, "Does IPThing trust X-Forwarded-For?")
+	assert.Contains(t, body, "never used as the client IP")
+	assert.Contains(t, body, "TCP or QUIC peer")
+	ldStart := strings.Index(body, `<script type="application/ld+json">`)
+	require.Greater(t, ldStart, -1)
+	ld := body[ldStart+len(`<script type="application/ld+json">`):]
+	ldEnd := strings.Index(ld, "</script>")
+	require.Greater(t, ldEnd, -1)
+	assert.True(t, json.Valid([]byte(ld[:ldEnd])), "homepage JSON-LD must be valid JSON")
 }
 
 func TestHandleRoot_BrowserEscapesXSSInUserAgent(t *testing.T) {
@@ -121,6 +131,14 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "jonhadfield/ipthing-analysis")
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "https://ipthing.net/privacy")
+
+	headReq := httptest.NewRequest(http.MethodHead, "/privacy", nil)
+	headRec := httptest.NewRecorder()
+	e.ServeHTTP(headRec, headReq)
+	assert.Equal(t, http.StatusOK, headRec.Code)
+	assert.Empty(t, headRec.Body.String())
+	assert.Contains(t, headRec.Header().Get("Content-Type"), "text/html")
+	assert.Equal(t, "0", headRec.Header().Get("Content-Length"))
 }
 
 func TestDocsPages(t *testing.T) {
@@ -153,6 +171,15 @@ func TestDocsPages(t *testing.T) {
 			assert.Contains(t, body, page.canonical)
 			assert.Contains(t, body, page.mustContain)
 			assert.Contains(t, body, "https://stats.ipthing.net/")
+		})
+		t.Run(page.path+" HEAD", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodHead, page.path, nil)
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, req)
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Empty(t, rec.Body.String())
+			assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+			assert.Equal(t, "0", rec.Header().Get("Content-Length"))
 		})
 	}
 }

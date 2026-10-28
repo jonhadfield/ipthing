@@ -25,12 +25,70 @@
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "IPThing",
-        "url": "https://ipthing.net/",
-        "description": "Shows your public IP address, approximate location, ISP, HTTP request headers and TLS details.",
-        "applicationCategory": "UtilitiesApplication",
-        "operatingSystem": "Any"
+        "@graph": [
+            {
+                "@type": "WebApplication",
+                "name": "IPThing",
+                "url": "https://ipthing.net/",
+                "description": "Shows your public IP address, approximate location, ISP, HTTP request headers and TLS details.",
+                "applicationCategory": "UtilitiesApplication",
+                "operatingSystem": "Any"
+            },
+            {
+                "@type": "FAQPage",
+                "url": "https://ipthing.net/",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "What is an IP address?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "An IP (Internet Protocol) address is the number that identifies your connection on the internet. Every site you visit sees it, and it is how replies find their way back to you. Your internet provider usually assigns it, and it can change over time."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Why is this different from the IP on my device?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Your computer or phone usually has a private address, such as 192.168.x.x or 10.x.x.x, that only works on your home or office network. Your router shares one public address between every device behind it. The address shown on IPThing is that public one."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Why does it show a different location or provider?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "IP location is estimated from registry and network data, so it is often only accurate to the city or region. If you use a VPN, proxy, Tor or iCloud Private Relay, you will see the address and location of that service instead of your own."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Does IPThing trust X-Forwarded-For?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "No. The address labelled IP Address is the TCP or QUIC peer (RemoteAddr). X-Forwarded-For, X-Real-IP, and Cf-Connecting-Ip are shown as request metadata and are never used as the client IP. IPThing runs on the public internet with no reverse proxy."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Does IPThing support IPv4 and IPv6?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Yes. IPv4 addresses look like 203.0.113.7; IPv6 addresses look like 2001:db8::1. If your connection has IPv6, your device will usually prefer it. Use curl -4 or curl -6 to force a family."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "How do I check my IP from the command line?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Run curl https://ipthing.net for JSON with your IP address, location and request details. Add -4 or -6 to check IPv4 or IPv6 specifically."
+                        }
+                    }
+                ]
+            }
+        ]
     }
     </script>
     <style>
@@ -105,7 +163,7 @@
     <h1>What is my IP address?</h1>
     <p class="ip-label">Your public IP address is</p>
     <p class="ip">{{ .IPAddr }}</p>
-    <p>This is the address websites see when you connect to them. Below are its approximate location and network, plus the HTTP headers and TLS details your browser sent. Run <code>curl https://ipthing.net</code> for the same data as JSON.</p>
+    <p>This is the address websites see when you connect to them. It is the TCP or QUIC peer, not <code>X-Forwarded-For</code>. Below are its approximate location and network, plus the HTTP headers and TLS details your browser sent. Run <code>curl https://ipthing.net</code> for the same data as JSON.</p>
 </div>
 <table>
     <tbody>
@@ -515,10 +573,13 @@
     <h2>Why does it show a different location or provider?</h2>
     <p>IP location is estimated from registry and network data, so it is often only accurate to the city or region. If you use a VPN, proxy, Tor or iCloud Private Relay, you will see the address and location of that service instead of your own.</p>
 
-    <h2>IPv4 and IPv6</h2>
+    <h2>Does IPThing trust X-Forwarded-For?</h2>
+    <p>No. The address labelled IP Address is the TCP or QUIC peer (<code>RemoteAddr</code>). <code>X-Forwarded-For</code>, <code>X-Real-IP</code>, and <code>Cf-Connecting-Ip</code> are shown as request metadata and are never used as the client IP. IPThing runs on the public internet with no reverse proxy, so the peer is the client. More detail: <a href="/headers">request headers</a>.</p>
+
+    <h2>Does IPThing support IPv4 and IPv6?</h2>
     <p>IPv4 addresses look like <code>203.0.113.7</code>; IPv6 addresses look like <code>2001:db8::1</code>. IPThing accepts both. If your connection has IPv6, your device will usually prefer it, so you will see your IPv6 address; otherwise you will see your IPv4 address.</p>
 
-    <h2>Check your IP from the command line</h2>
+    <h2>How do I check my IP from the command line?</h2>
     <pre>curl https://ipthing.net</pre>
     <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser. Add <code>-4</code> or <code>-6</code> to check your IPv4 or IPv6 address specifically. More examples: <a href="/curl">curl JSON</a>, <a href="/headers">request headers</a>, <a href="/tls">TLS / JA3 / JA4</a>.</p>
 </div>
