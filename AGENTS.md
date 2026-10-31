@@ -34,7 +34,7 @@ These limits exist to keep a public inspector from being an easy resource sink:
 - Operational request logs omit client IP, User-Agent, and query strings (analytics stay in the DB when configured)
 - CI runs tests + `govulncheck`; `make release-docker` scans the image with Trivy before push
 
-Crawl aids: `/robots.txt`, `/sitemap.xml`, and HTML meta/canonical on `/` and `/privacy`. Register the site in Google Search Console after deploy. Responses include `X-IPThing-Version: <tag>-<sha>` (from build ldflags).
+Crawl aids: `/robots.txt`, `/sitemap.xml`, and HTML meta/canonical on `/`, `/curl`, `/headers`, `/tls`, and `/privacy`. Docs HTML routes accept HEAD (200, empty body) so crawlers that probe with HEAD are not 405'd. Register the site in Google Search Console after deploy. Responses include `X-IPThing-Version: <tag>-<sha>` (from build ldflags).
 
 Privacy wording lives in `PRIVACY.md` and `/privacy`. Retention is indefinite by design; do not add automatic purge unless the operator asks.
 
