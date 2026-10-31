@@ -131,6 +131,9 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "jonhadfield/ipthing-analysis")
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "https://ipthing.net/privacy")
+	assert.Contains(t, body, `name="viewport"`)
+	assert.Contains(t, body, `content="https://ipthing.net/og-image.png"`)
+	assert.Contains(t, body, `property="og:title"`)
 
 	headReq := httptest.NewRequest(http.MethodHead, "/privacy", nil)
 	headRec := httptest.NewRecorder()
