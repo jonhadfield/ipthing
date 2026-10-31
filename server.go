@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -340,18 +341,19 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	// Cap request bodies (1 MiB): we inspect metadata, not process payloads.
 	e.Use(app.requestBodyLimitMiddleware())
 
-	// Embedded static files
+	// Embedded static files. GET+HEAD so crawlers probing robots/sitemap/og-image are not 405'd.
 	assetFS := GetAssetFS()
-	e.GET("/favicon.ico", app.serveEmbeddedAsset(assetFS, "favicon.ico"))
-	e.GET("/favicon-16x16.png", app.serveEmbeddedAsset(assetFS, "favicon-16x16.png"))
-	e.GET("/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
-	e.GET("/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
-	e.GET("/android-chrome-192x192.png", app.serveEmbeddedAsset(assetFS, "android-chrome-192x192.png"))
-	e.GET("/android-chrome-512x512.png", app.serveEmbeddedAsset(assetFS, "android-chrome-512x512.png"))
-	e.GET("/og-image.png", app.serveEmbeddedAsset(assetFS, "og-image.png"))
-	e.GET("/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
-	e.GET("/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
-	e.GET("/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))
+	getHead := []string{http.MethodGet, http.MethodHead}
+	e.Match(getHead, "/favicon.ico", app.serveEmbeddedAsset(assetFS, "favicon.ico"))
+	e.Match(getHead, "/favicon-16x16.png", app.serveEmbeddedAsset(assetFS, "favicon-16x16.png"))
+	e.Match(getHead, "/favicon-32x32.png", app.serveEmbeddedAsset(assetFS, "favicon-32x32.png"))
+	e.Match(getHead, "/apple-touch-icon.png", app.serveEmbeddedAsset(assetFS, "apple-touch-icon.png"))
+	e.Match(getHead, "/android-chrome-192x192.png", app.serveEmbeddedAsset(assetFS, "android-chrome-192x192.png"))
+	e.Match(getHead, "/android-chrome-512x512.png", app.serveEmbeddedAsset(assetFS, "android-chrome-512x512.png"))
+	e.Match(getHead, "/og-image.png", app.serveEmbeddedAsset(assetFS, "og-image.png"))
+	e.Match(getHead, "/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
+	e.Match(getHead, "/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
+	e.Match(getHead, "/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))
 	// GET+HEAD so crawlers that probe with HEAD do not get 405 on indexable HTML.
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/privacy", app.viewHandler("privacy"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/curl", app.viewHandler("curl"))
@@ -389,6 +391,15 @@ func (app *Application) serveEmbeddedAsset(assetFS fs.FS, filename string) echo.
 				log.Printf("Error closing file %s: %v", filename, closeErr)
 			}
 		}()
+
+		if c.Request().Method == http.MethodHead {
+			h := c.Response().Header()
+			h.Set(echo.HeaderContentType, getContentType(filename))
+			if info, err := file.Stat(); err == nil {
+				h.Set(echo.HeaderContentLength, strconv.FormatInt(info.Size(), 10))
+			}
+			return c.NoContent(http.StatusOK)
+		}
 
 		return c.Stream(http.StatusOK, getContentType(filename), file)
 	}

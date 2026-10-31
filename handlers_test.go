@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -239,6 +240,7 @@ func TestSEOStaticRoutes(t *testing.T) {
 		body := rec.Body.String()
 		assert.Contains(t, body, "User-agent: *")
 		assert.Contains(t, body, "Sitemap: https://ipthing.net/sitemap.xml")
+		assertAssetHEAD(t, e, "/robots.txt", rec)
 	})
 
 	t.Run("sitemap.xml", func(t *testing.T) {
@@ -280,6 +282,7 @@ func TestSEOStaticRoutes(t *testing.T) {
 			assert.Equal(t, http.StatusOK, pageRec.Code, "sitemap loc %s must serve 200", loc)
 			assert.Contains(t, pageRec.Body.String(), `rel="canonical"`)
 		}
+		assertAssetHEAD(t, e, "/sitemap.xml", rec)
 	})
 
 	t.Run("og-image.png", func(t *testing.T) {
@@ -288,6 +291,7 @@ func TestSEOStaticRoutes(t *testing.T) {
 		e.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "image/png", rec.Header().Get("Content-Type"))
+		assertAssetHEAD(t, e, "/og-image.png", rec)
 	})
 
 	t.Run("site.webmanifest", func(t *testing.T) {
@@ -297,7 +301,19 @@ func TestSEOStaticRoutes(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Header().Get("Content-Type"), "application/manifest+json")
 		assert.Contains(t, rec.Body.String(), `"name": "IPThing"`)
+		assertAssetHEAD(t, e, "/site.webmanifest", rec)
 	})
+}
+
+func assertAssetHEAD(t *testing.T, e *echo.Echo, path string, getRec *httptest.ResponseRecorder) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodHead, path, nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Empty(t, rec.Body.String())
+	assert.Equal(t, getRec.Header().Get("Content-Type"), rec.Header().Get("Content-Type"))
+	assert.Equal(t, strconv.Itoa(getRec.Body.Len()), rec.Header().Get("Content-Length"))
 }
 
 func TestHandleRoot_JSONResponse(t *testing.T) {
