@@ -143,7 +143,7 @@ Without a database, the inspector still works; nothing is persisted. Geolocation
 
 ## Docker
 
-Image: [`ghcr.io/jonhadfield/ipthing`](https://github.com/jonhadfield/ipthing/pkgs/container/ipthing) (distroless).
+Image: [`ghcr.io/jonhadfield/ipthing`](https://github.com/jonhadfield/ipthing/pkgs/container/ipthing) (distroless). Production **ipthing.net** runs as a binary on a virtual machine, not in a container; the image is for packaging and vulnerability scanning.
 
 ```bash
 make build-docker

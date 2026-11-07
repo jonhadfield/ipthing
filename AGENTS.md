@@ -4,6 +4,8 @@ IPThing shows clients their connection details (IP, headers, TLS). See `CLAUDE.m
 
 ## Deployment: no reverse proxy
 
+Production runs as a process on a **virtual machine** (DigitalOcean droplet), not in a container or Kubernetes. A Docker image exists for packaging/CI scanning, but that is not how ipthing.net is deployed.
+
 Run this service **directly on the public interface** (or with TLS terminated on the process itself via AutoTLS). Do **not** put nginx, Caddy, a cloud LB, or similar in front.
 
 A proxy breaks the product: `RemoteAddr` becomes the proxy, and trusting `X-Forwarded-For` / `X-Real-IP` / `Cf-Connecting-Ip` invites spoofing unless the edge strips client-supplied values. The intended source of truth for the client IP is the TCP peer (`RemoteAddr`), with forwarding headers shown as request metadata only.

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "GO-2026-6872",
+    "module": "github.com/labstack/echo/v4",
+    "reason": "Rate-limit XFF bypass only applies when RealIP trusts forwarded headers. We set e.IPExtractor = echo.ExtractIPDirect() and IdentifierExtractor uses c.RealIP(); no reverse proxy (AGENTS.md). Echo v4 has no fixed release (Fixed in: N/A); v5.1.0+ is the upstream fix.",
+    "reviewed": "2026-11-07",
+    "review_by": "2027-02-07"
+  },
+  {
+    "id": "GO-2026-6875",
+    "module": "github.com/labstack/echo/v4",
+    "reason": "Proxy middleware X-Real-IP forwarding. This service does not use middleware.Proxy and terminates TLS itself with AutoTLS. Echo v4 has no fixed release (Fixed in: N/A); v5.4.0+ is the upstream fix.",
+    "reviewed": "2026-11-07",
+    "review_by": "2027-02-07"
+  }
+]

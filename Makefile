@@ -21,7 +21,7 @@ lint:
 	golangci-lint run ./...
 
 govulncheck: ## Scan dependencies for known vulnerabilities
-	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	./scripts/check-govulncheck.sh
 
 ci: lint test govulncheck
 
