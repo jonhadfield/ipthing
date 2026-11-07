@@ -24,7 +24,10 @@ func (m *MariaDB) Connect() error {
 		return fmt.Errorf("failed to open MariaDB database: %w", err)
 	}
 
+	configureRemoteDBPool(db)
+
 	if err := db.Ping(); err != nil {
+		_ = db.Close()
 		return fmt.Errorf("failed to ping MariaDB database: %w", err)
 	}
 

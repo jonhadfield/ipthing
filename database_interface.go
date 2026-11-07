@@ -21,6 +21,21 @@ type BaseDB struct {
 	db *sql.DB
 }
 
+// Pool settings for networked databases (Postgres, MariaDB). Idle connections
+// are closed well before Neon's default 5-minute scale-to-zero so a mostly
+// quiet inspector does not keep compute awake forever.
+const (
+	remoteDBMaxOpenConns = 8
+	remoteDBMaxIdleConns = 1
+	remoteDBConnMaxIdle  = 2 * time.Minute
+)
+
+func configureRemoteDBPool(db *sql.DB) {
+	db.SetMaxOpenConns(remoteDBMaxOpenConns)
+	db.SetMaxIdleConns(remoteDBMaxIdleConns)
+	db.SetConnMaxIdleTime(remoteDBConnMaxIdle)
+}
+
 func (b *BaseDB) Close() error {
 	if b.db != nil {
 		return b.db.Close()
