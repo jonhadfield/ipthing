@@ -88,6 +88,7 @@ docker-push: login
 	docker --log-level debug push ${IMG}
 	docker --log-level debug push ${LATEST}
 
+# Optional k8s helper only — production ipthing.net is a Contabo systemd unit, not this target.
 redeploy:
 	kubectl -n ipthing rollout restart deployments/ipthing
 

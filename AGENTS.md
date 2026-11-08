@@ -1,10 +1,10 @@
 # AGENTS.md
 
-IPThing shows clients their connection details (IP, headers, TLS). See `CLAUDE.md` for build/test commands and architecture.
+IPThing shows clients their connection details (IP, headers, TLS). Build/test/run commands live in the `Makefile` and `README.md`.
 
 ## Deployment: no reverse proxy
 
-Production runs as a process on a **virtual machine** (Contabo), not in a container or Kubernetes. A Docker image exists for packaging/CI scanning, but that is not how ipthing.net is deployed.
+Production runs as a process on a **Contabo VM** (`bob` / `94.72.101.19`), not in a container or Kubernetes. Binary: `/opt/ipthing/ipthing`; unit: `ipthing.service`. A Docker image exists for packaging/CI scanning; `make redeploy` (kubectl) is not the live path.
 
 Run this service **directly on the public interface** (or with TLS terminated on the process itself via AutoTLS). Do **not** put nginx, Caddy, a cloud LB, or similar in front.
 
