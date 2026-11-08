@@ -10,6 +10,7 @@
     <meta property="og:description" content="Inspect the HTTP headers your browser or script sent. IPThing uses the TCP peer as your IP; X-Forwarded-For is metadata only.">
     <meta property="og:url" content="https://ipthing.net/headers">
     <meta property="og:image:alt" content="IPThing HTTP request header inspector">
+    <meta name="twitter:title" content="What headers does my browser send? — IPThing">
     {{template "docs-style"}}
     <script type="application/ld+json">
     {
@@ -57,7 +58,7 @@
     <li>Forwarding headers if you sent them (<code>X-Forwarded-For</code>, <code>X-Real-IP</code>, <code>Cf-Connecting-Ip</code>, <code>Forwarded</code>, <code>Via</code>)</li>
     <li>Cookie <strong>names</strong> only — values are never shown or stored</li>
 </ul>
-<p><a href="/curl">curl</a> gets the same fields as JSON. <a href="/tls">TLS version, ALPN, JA3 and JA4</a> are listed with the headers on the live page.</p>
+<p><a href="/curl">curl</a> gets the same fields as JSON. <a href="/tls">TLS version, ALPN, JA3 and JA4</a> are listed with the headers on the live page. To see whether the peer was IPv6 or IPv4, see <a href="/ipv6">IPv6 address check</a>.</p>
 
 <h2>Your IP is the peer, not a forwarding header</h2>
 <p>IPThing runs on the public internet with no reverse proxy. The address labelled IP Address is <code>RemoteAddr</code> — the TCP or QUIC peer. Spoofing <code>X-Forwarded-For</code> changes that row in the table; it does not change the recorded client IP.</p>

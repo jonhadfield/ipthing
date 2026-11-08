@@ -10,6 +10,7 @@
     <meta property="og:description" content="Inspect the TLS handshake your client offered: version, cipher, ALPN, JA3 and JA4. HTTP/3 is served on UDP 443.">
     <meta property="og:url" content="https://ipthing.net/tls">
     <meta property="og:image:alt" content="IPThing TLS and JA4 fingerprint inspector">
+    <meta name="twitter:title" content="TLS, HTTP/3, JA3 and JA4 fingerprints — IPThing">
     {{template "docs-style"}}
     <script type="application/ld+json">
     {
@@ -64,7 +65,7 @@
 <h2>HTTP/3</h2>
 <p>HTTPS serves HTTP/1.1 and HTTP/2 on <strong>TCP 443</strong>. HTTP/3 (QUIC) listens on <strong>UDP 443</strong> and is advertised with <code>Alt-Svc</code>. If UDP/443 is blocked on the path, you will still get HTTP/2. The Protocol field on the live page is what was actually used.</p>
 
-<p>Related: <a href="/headers">request headers</a> your client sent alongside the handshake.</p>
+<p>Related: <a href="/headers">request headers</a> your client sent alongside the handshake, and <a href="/ipv6">IPv6 vs IPv4</a> for the peer address family on the same connection.</p>
 
 {{template "site-footer"}}
 </body>

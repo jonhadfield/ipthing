@@ -34,7 +34,8 @@ func (h *Handler) HandleRoot(c echo.Context) error {
 	responseData := h.buildResponseData(c.Request(), httpReq, ipInfo)
 
 	var writeErr error
-	if IsWebBrowser(c.Request().UserAgent()) {
+	req := c.Request()
+	if wantsHTMLResponse(req.UserAgent(), req.Header.Get("Accept")) {
 		httpReq.ResponseFormat = "html"
 		writeErr = c.Render(http.StatusOK, "web", responseData)
 	} else {

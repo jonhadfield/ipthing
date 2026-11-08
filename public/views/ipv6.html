@@ -1,0 +1,68 @@
+{{define "ipv6"}}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>What is my IPv6 address? — IPThing</title>
+    <meta name="description" content="Check your public IPv6 address. IPThing shows the TCP or QUIC peer: IPv6 when your path uses it, IPv4 otherwise. Force a family with curl -4 or curl -6.">
+    <link rel="canonical" href="https://ipthing.net/ipv6">
+    <meta property="og:title" content="What is my IPv6 address? — IPThing">
+    <meta property="og:description" content="See whether this connection used IPv6 or IPv4. The address is the peer, not X-Forwarded-For. Use curl -6 to force IPv6.">
+    <meta property="og:url" content="https://ipthing.net/ipv6">
+    <meta property="og:image:alt" content="IPThing IPv6 address check">
+    <meta name="twitter:title" content="What is my IPv6 address? — IPThing">
+    {{template "docs-style"}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "What is my IPv6 address?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Open https://ipthing.net/ in a browser. If your path to the server used IPv6, the IP Address row is your public IPv6 address and IP Family is ipv6. Otherwise you will see IPv4."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "How do I force IPv6 with curl?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Run curl -6 https://ipthing.net. That forces the IPv6 AAAA record. Use curl -4 for IPv4. Without -4 or -6, curl follows whichever family DNS prefers."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Why do I only see IPv4?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Your network, VPN, or DNS path may not offer IPv6 to ipthing.net. Many home and mobile networks are still IPv4-only or use IPv6 only for some destinations. curl -6 will fail if there is no IPv6 route."
+                }
+            }
+        ]
+    }
+    </script>
+</head>
+<body>
+<h1>What is my IPv6 address?</h1>
+<p>Open <a href="https://ipthing.net/">ipthing.net</a> for the address this server saw on your connection. The <strong>IP Family</strong> row is <code>ipv6</code> or <code>ipv4</code>. That value is the TCP or QUIC peer — not a forwarding header.</p>
+
+<h2>IPv6 vs IPv4 on one URL</h2>
+<p>IPThing listens on both address families. Browsers and most clients pick one path via DNS. Dual-stack devices often prefer IPv6 when a AAAA record works, so you may see a long hexadecimal address even if you also have IPv4.</p>
+
+<h2>Force a family with curl</h2>
+<pre>curl -6 https://ipthing.net
+curl -4 https://ipthing.net</pre>
+<p><code>-6</code> uses IPv6 only; <code>-4</code> uses IPv4 only. Print just the address:</p>
+<pre>curl -6 -s https://ipthing.net | jq -r .IPAddr</pre>
+<p>More curl examples: <a href="/curl">curl JSON</a>.</p>
+
+<h2>What an IPv6 address looks like</h2>
+<p>Public IPv6 addresses are 128-bit values written as eight groups of hex, often shortened with <code>::</code> (for example <code>2001:db8::1</code>). Link-local addresses start with <code>fe80:</code> and never appear here — only the public peer that reached this host.</p>
+
+{{template "site-footer"}}
+</body>
+</html>
+{{end}}

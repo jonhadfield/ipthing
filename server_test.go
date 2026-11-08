@@ -171,6 +171,33 @@ func TestIsWebBrowser(t *testing.T) {
 	}
 }
 
+func TestPrefersHTML(t *testing.T) {
+	tests := []struct {
+		accept   string
+		expected bool
+	}{
+		{"", false},
+		{"*/*", false},
+		{"application/json", false},
+		{"text/html", true},
+		{"text/html,application/xhtml+xml;q=0.9,*/*;q=0.8", true},
+		{"application/json, text/html;q=0.8", false},
+		{"text/html;q=0.9, application/json;q=0.8", true},
+		{"application/xhtml+xml", true},
+		{"text/html;q=0", false},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.expected, prefersHTML(tt.accept), "accept=%q", tt.accept)
+	}
+}
+
+func TestWantsHTMLResponse(t *testing.T) {
+	assert.True(t, wantsHTMLResponse("Mozilla/5.0", "*/*"))
+	assert.True(t, wantsHTMLResponse("SEOAudit/1.0", "text/html"))
+	assert.False(t, wantsHTMLResponse("curl/8.0.0", "*/*"))
+	assert.False(t, wantsHTMLResponse("curl/8.0.0", "application/json"))
+}
+
 func TestClacksOverheadMiddleware(t *testing.T) {
 	e := echo.New()
 	e.Use(clacksOverheadMiddleware())

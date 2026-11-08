@@ -357,6 +357,7 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	// GET+HEAD so crawlers that probe with HEAD do not get 405 on indexable HTML.
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/privacy", app.viewHandler("privacy"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/curl", app.viewHandler("curl"))
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/ipv6", app.viewHandler("ipv6"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/headers", app.viewHandler("headers"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/tls", app.viewHandler("tls"))
 

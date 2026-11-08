@@ -50,6 +50,8 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, `rel="canonical"`)
 	assert.Contains(t, body, "curl https://ipthing.net")
 	assert.Contains(t, body, `content="https://ipthing.net/og-image.png"`)
+	assert.Contains(t, body, `name="twitter:image"`)
+	assert.Contains(t, body, `name="twitter:title"`)
 	assert.Contains(t, body, "https://stats.ipthing.net/")
 	assert.Contains(t, body, "https://github.com/jonhadfield/ipthing")
 	assert.Contains(t, body, `"@type": "FAQPage"`)
@@ -134,6 +136,8 @@ func TestPrivacyPage(t *testing.T) {
 	assert.Contains(t, body, "https://ipthing.net/privacy")
 	assert.Contains(t, body, `name="viewport"`)
 	assert.Contains(t, body, `content="https://ipthing.net/og-image.png"`)
+	assert.Contains(t, body, `name="twitter:image"`)
+	assert.Contains(t, body, `name="twitter:title"`)
 	assert.Contains(t, body, `property="og:title"`)
 
 	headReq := httptest.NewRequest(http.MethodHead, "/privacy", nil)
@@ -161,6 +165,7 @@ func TestDocsPages(t *testing.T) {
 		mustContain string
 	}{
 		{"/curl", "https://ipthing.net/curl", "curl https://ipthing.net"},
+		{"/ipv6", "https://ipthing.net/ipv6", "curl -6"},
 		{"/headers", "https://ipthing.net/headers", "X-Forwarded-For"},
 		{"/tls", "https://ipthing.net/tls", "JA4"},
 	}
@@ -174,6 +179,8 @@ func TestDocsPages(t *testing.T) {
 			assert.Contains(t, body, `rel="canonical"`)
 			assert.Contains(t, body, page.canonical)
 			assert.Contains(t, body, page.mustContain)
+			assert.Contains(t, body, `name="twitter:image"`)
+			assert.Contains(t, body, `name="twitter:title"`)
 			assert.Contains(t, body, "https://stats.ipthing.net/")
 		})
 		t.Run(page.path+" HEAD", func(t *testing.T) {
@@ -267,6 +274,7 @@ func TestSEOStaticRoutes(t *testing.T) {
 		want := []string{
 			"https://ipthing.net/",
 			"https://ipthing.net/curl",
+			"https://ipthing.net/ipv6",
 			"https://ipthing.net/headers",
 			"https://ipthing.net/tls",
 			"https://ipthing.net/privacy",
@@ -352,6 +360,46 @@ func TestHandleRoot_JSONResponse(t *testing.T) {
 	assert.Equal(t, "203.0.113.50", responseData["IPAddr"])
 	assert.Equal(t, "curl/7.68.0", responseData["UserAgent"])
 	assert.Equal(t, "198.51.100.2", responseData["XFF"])
+}
+
+func TestHandleRoot_AcceptPrefersHTML(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+	renderer, err := NewEmbeddedRenderer()
+	require.NoError(t, err)
+	e.Renderer = renderer
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.50:54321"
+	req.Header.Set("User-Agent", "SEOAudit/1.0")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	handler := NewHandler(NewRequestProcessor(&NoOpDB{}, false, e.Logger))
+	require.NoError(t, handler.HandleRoot(c))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+	assert.Contains(t, rec.Body.String(), "What is my IP address?")
+}
+
+func TestHandleRoot_AcceptJSONStillJSON(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "203.0.113.50:54321"
+	req.Header.Set("User-Agent", "SEOAudit/1.0")
+	req.Header.Set("Accept", "application/json, text/html;q=0.8")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	handler := NewHandler(NewRequestProcessor(&NoOpDB{}, false, e.Logger))
+	require.NoError(t, handler.HandleRoot(c))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 }
 
 func TestRootAcceptsNonGETMethods(t *testing.T) {

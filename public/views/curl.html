@@ -10,6 +10,7 @@
     <meta property="og:description" content="curl https://ipthing.net returns JSON with your public IP, location, headers and TLS. Force IPv4 or IPv6 with -4 or -6.">
     <meta property="og:url" content="https://ipthing.net/curl">
     <meta property="og:image:alt" content="IPThing curl JSON examples">
+    <meta name="twitter:title" content="curl: get your public IP as JSON — IPThing">
     {{template "docs-style"}}
     <script type="application/ld+json">
     {
@@ -37,7 +38,7 @@
                 "name": "Why does curl get JSON instead of HTML?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "IPThing serves HTML to browser User-Agents and pretty-printed JSON to everything else, including curl and wget. The live inspector in a browser is https://ipthing.net/."
+                    "text": "IPThing serves HTML to browser User-Agents, or when Accept explicitly prefers text/html over application/json. curl and wget usually send Accept: */* and receive pretty-printed JSON. The live inspector in a browser is https://ipthing.net/."
                 }
             }
         ]
@@ -46,7 +47,7 @@
 </head>
 <body>
 <h1>Get your public IP with curl</h1>
-<p>From a terminal, <a href="https://ipthing.net/">ipthing.net</a> returns JSON: your public IP, approximate location, the headers you sent, and TLS details. Browsers still get HTML on the same URL.</p>
+<p>From a terminal, <a href="https://ipthing.net/">ipthing.net</a> returns JSON: your public IP, approximate location, the headers you sent, and TLS details. Browsers (and clients that explicitly prefer <code>text/html</code>) still get HTML on the same URL.</p>
 
 <pre>curl https://ipthing.net</pre>
 
@@ -75,7 +76,7 @@ curl -6 https://ipthing.net</pre>
   "JA4": "t13d…",
   "XFF": ""
 }</pre>
-<p>A browser User-Agent (<code>Mozilla</code>, <code>AppleWebKit</code>, <code>Gecko</code>, …) receives HTML instead. <a href="/headers">Request headers</a> and <a href="/tls">TLS / JA3 / JA4</a> are documented separately. See live traffic mix at <a href="https://stats.ipthing.net/">stats.ipthing.net</a>.</p>
+<p>A browser User-Agent (<code>Mozilla</code>, <code>AppleWebKit</code>, <code>Gecko</code>, …) receives HTML instead, as does a non-browser client with <code>Accept: text/html</code> preferred over JSON. <a href="/ipv6">IPv6</a>, <a href="/headers">request headers</a>, and <a href="/tls">TLS / JA3 / JA4</a> are documented separately. See live traffic mix at <a href="https://stats.ipthing.net/">stats.ipthing.net</a>.</p>
 
 {{template "site-footer"}}
 </body>

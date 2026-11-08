@@ -13,6 +13,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://ipthing.net/ipv6</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://ipthing.net/headers</loc>
     <lastmod>2026-10-26</lastmod>
     <changefreq>monthly</changefreq>

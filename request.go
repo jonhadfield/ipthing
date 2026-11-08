@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"mime"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -283,3 +285,58 @@ func IsWebBrowser(userAgent string) bool {
 }
 
 var webBrowserUA = regexp.MustCompile(`Mozilla|AppleWebKit|Trident|Presto|Gecko|KHTML|Blink|Lynx|Links|w3m|elinks`)
+
+// wantsHTMLResponse is true for browser User-Agents, or when Accept explicitly
+// prefers text/html (or XHTML) over application/json. Bare */* (typical curl)
+// does not count as preferring HTML.
+func wantsHTMLResponse(userAgent, accept string) bool {
+	return IsWebBrowser(userAgent) || prefersHTML(accept)
+}
+
+func prefersHTML(accept string) bool {
+	htmlQ, htmlOK := explicitMediaQuality(accept, "text/html")
+	if !htmlOK {
+		htmlQ, htmlOK = explicitMediaQuality(accept, "application/xhtml+xml")
+	}
+	if !htmlOK || htmlQ <= 0 {
+		return false
+	}
+	jsonQ, jsonOK := explicitMediaQuality(accept, "application/json")
+	if !jsonOK {
+		return true
+	}
+	return htmlQ > jsonQ
+}
+
+// explicitMediaQuality returns the q-value for an exact type/subtype in Accept.
+// Wildcards (*/* or type/*) are ignored so CLI clients sending */* stay on JSON.
+func explicitMediaQuality(accept, want string) (float64, bool) {
+	best := -1.0
+	found := false
+	for _, part := range strings.Split(accept, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		media, params, err := mime.ParseMediaType(part)
+		if err != nil {
+			continue
+		}
+		if !strings.EqualFold(media, want) {
+			continue
+		}
+		q := 1.0
+		if qs, ok := params["q"]; ok {
+			parsed, err := strconv.ParseFloat(qs, 64)
+			if err != nil {
+				continue
+			}
+			q = parsed
+		}
+		if !found || q > best {
+			best = q
+			found = true
+		}
+	}
+	return best, found
+}

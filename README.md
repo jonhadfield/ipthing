@@ -6,6 +6,7 @@ HTTP request inspector. Open **[https://ipthing.net](https://ipthing.net)** in a
 | --- | --- |
 | Live service | **[https://ipthing.net](https://ipthing.net)** |
 | curl / JSON | [https://ipthing.net/curl](https://ipthing.net/curl) |
+| IPv6 | [https://ipthing.net/ipv6](https://ipthing.net/ipv6) |
 | Request headers | [https://ipthing.net/headers](https://ipthing.net/headers) |
 | TLS / JA3 / JA4 | [https://ipthing.net/tls](https://ipthing.net/tls) |
 | Traffic stats | **[https://stats.ipthing.net](https://stats.ipthing.net)** |
@@ -43,7 +44,7 @@ curl -6 https://ipthing.net
 curl http://ipthing.net
 ```
 
-User-Agents that look like a browser (`Mozilla`, `AppleWebKit`, `Gecko`, …) receive HTML. Everything else receives `application/json`.
+User-Agents that look like a browser (`Mozilla`, `AppleWebKit`, `Gecko`, …) receive HTML, as do clients whose `Accept` header explicitly prefers `text/html` over `application/json`. Everything else (including typical `curl` with `Accept: */*`) receives `application/json`.
 
 JSON field names match the HTML labels (PascalCase), for example:
 
