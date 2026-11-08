@@ -11,45 +11,56 @@
     <meta property="og:url" content="https://ipthing.net/headers">
     <meta property="og:image:alt" content="IPThing HTTP request header inspector">
     <meta name="twitter:title" content="What headers does my browser send? — IPThing">
+    <meta name="twitter:description" content="Inspect the HTTP headers your browser or script sent. IPThing uses the TCP peer as your IP; X-Forwarded-For is metadata only.">
     {{template "docs-style"}}
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
+        "@graph": [
             {
-                "@type": "Question",
-                "name": "What headers does my browser send?",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "Open https://ipthing.net/ to see the request headers this server received: User-Agent, Accept, client hints, forwarding headers, and more. No JavaScript is required."
-                }
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://ipthing.net/"},
+                    {"@type": "ListItem", "position": 2, "name": "Headers", "item": "https://ipthing.net/headers"}
+                ]
             },
             {
-                "@type": "Question",
-                "name": "Does IPThing trust X-Forwarded-For?",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "No. The client IP is the TCP or QUIC peer. X-Forwarded-For, X-Real-IP, and Cf-Connecting-Ip are shown as request metadata and are never used as the client address."
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "Are cookie values stored?",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "No. Only cookie names are shown and stored. Cookie values, Authorization, and similar secrets are redacted."
-                }
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "What headers does my browser send?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Open https://ipthing.net/ to see the request headers this server received: User-Agent, Accept, client hints, forwarding headers, and more. No JavaScript is required."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Does IPThing trust X-Forwarded-For?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "No. The client IP is the TCP or QUIC peer. X-Forwarded-For, X-Real-IP, and Cf-Connecting-Ip are shown as request metadata and are never used as the client address."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Are cookie values stored?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "No. Only cookie names are shown and stored. Cookie values, Authorization, and similar secrets are redacted."
+                        }
+                    }
+                ]
             }
         ]
     }
     </script>
 </head>
 <body>
+<main>
 <h1>What headers does my browser send?</h1>
 <p>Open <a href="https://ipthing.net/">ipthing.net</a> for a live list of the HTTP request headers this server received from your client. Nothing runs in the browser; the table is rendered on the server.</p>
-
-<h2>What you will see</h2>
 <ul>
     <li>Method, path, Host, protocol (HTTP/1.1, HTTP/2, or HTTP/3), and scheme</li>
     <li>User-Agent, Accept, Accept-Language, Accept-Encoding</li>
@@ -60,12 +71,12 @@
 </ul>
 <p><a href="/curl">curl</a> gets the same fields as JSON. <a href="/tls">TLS version, ALPN, JA3 and JA4</a> are listed with the headers on the live page. To see whether the peer was IPv6 or IPv4, see <a href="/ipv6">IPv6 address check</a>.</p>
 
-<h2>Your IP is the peer, not a forwarding header</h2>
-<p>IPThing runs on the public internet with no reverse proxy. The address labelled IP Address is <code>RemoteAddr</code> — the TCP or QUIC peer. Spoofing <code>X-Forwarded-For</code> changes that row in the table; it does not change the recorded client IP.</p>
+<h2>Does IPThing trust X-Forwarded-For?</h2>
+<p>No. IPThing runs on the public internet with no reverse proxy. The address labelled IP Address is <code>RemoteAddr</code> — the TCP or QUIC peer. Spoofing <code>X-Forwarded-For</code> changes that row in the table; it does not change the recorded client IP.</p>
 
-<h2>Secrets</h2>
-<p><code>Authorization</code>, <code>Cookie</code>, <code>Set-Cookie</code>, <code>X-Api-Key</code>, and similar values are redacted before display and storage. Request bodies are not stored. Details: <a href="/privacy">privacy</a>.</p>
-
+<h2>Are cookie values stored?</h2>
+<p>No. Only cookie names are shown and stored. <code>Authorization</code>, <code>Cookie</code>, <code>Set-Cookie</code>, <code>X-Api-Key</code>, and similar values are redacted before display and storage. Request bodies are not stored. Details: <a href="/privacy">privacy</a>.</p>
+</main>
 {{template "site-footer"}}
 </body>
 </html>

@@ -192,6 +192,13 @@ func (app *Application) setupServer() *echo.Echo {
 		},
 	}))
 	e.Use(middleware.Recover())
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level: 5,
+		Skipper: func(c echo.Context) bool {
+			path := c.Request().URL.Path
+			return strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".ico")
+		},
+	}))
 	e.Use(versionHeaderMiddleware())
 	e.Use(rateLimitMiddleware(app.sharedRateLimiterStore()))
 	// Bound handler work (e.g. ipinfo.io). Slow-client DoS is handled by server read timeouts.
@@ -300,7 +307,7 @@ func rateLimitMiddleware(store middleware.RateLimiterStore) echo.MiddlewareFunc 
 			switch c.Request().URL.Path {
 			case "/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png",
 				"/android-chrome-192x192.png", "/android-chrome-512x512.png",
-				"/og-image.png", "/site.webmanifest", "/robots.txt", "/sitemap.xml":
+				"/og-image.png", "/site.webmanifest", "/robots.txt", "/sitemap.xml", "/llms.txt":
 				return true
 			default:
 				return false
@@ -354,6 +361,7 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.Match(getHead, "/site.webmanifest", app.serveEmbeddedAsset(assetFS, "site.webmanifest"))
 	e.Match(getHead, "/robots.txt", app.serveEmbeddedAsset(assetFS, "robots.txt"))
 	e.Match(getHead, "/sitemap.xml", app.serveEmbeddedAsset(assetFS, "sitemap.xml"))
+	e.Match(getHead, "/llms.txt", app.serveEmbeddedAsset(assetFS, "llms.txt"))
 	// GET+HEAD so crawlers that probe with HEAD do not get 405 on indexable HTML.
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/privacy", app.viewHandler("privacy"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/curl", app.viewHandler("curl"))
@@ -370,8 +378,9 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 // viewHandler renders a named HTML template with no request data.
 func (app *Application) viewHandler(name string) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		h := c.Response().Header()
+		h.Set("Cache-Control", "public, max-age=600")
 		if c.Request().Method == http.MethodHead {
-			h := c.Response().Header()
 			h.Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
 			h.Set(echo.HeaderContentLength, "0")
 			return c.NoContent(http.StatusOK)
@@ -393,8 +402,9 @@ func (app *Application) serveEmbeddedAsset(assetFS fs.FS, filename string) echo.
 			}
 		}()
 
+		h := c.Response().Header()
+		setAssetCacheControl(h, filename)
 		if c.Request().Method == http.MethodHead {
-			h := c.Response().Header()
 			h.Set(echo.HeaderContentType, getContentType(filename))
 			if info, err := file.Stat(); err == nil {
 				h.Set(echo.HeaderContentLength, strconv.FormatInt(info.Size(), 10))
@@ -403,6 +413,18 @@ func (app *Application) serveEmbeddedAsset(assetFS fs.FS, filename string) echo.
 		}
 
 		return c.Stream(http.StatusOK, getContentType(filename), file)
+	}
+}
+
+// setAssetCacheControl sets crawl-friendly cache headers for embedded static files.
+func setAssetCacheControl(h http.Header, filename string) {
+	switch {
+	case strings.HasSuffix(filename, ".png"), strings.HasSuffix(filename, ".ico"):
+		h.Set("Cache-Control", "public, max-age=604800, immutable")
+	case filename == "sitemap.xml", filename == "robots.txt", filename == "llms.txt":
+		h.Set("Cache-Control", "public, max-age=3600")
+	case filename == "site.webmanifest":
+		h.Set("Cache-Control", "public, max-age=86400")
 	}
 }
 

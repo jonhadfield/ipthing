@@ -33,6 +33,9 @@ func (h *Handler) HandleRoot(c echo.Context) error {
 
 	responseData := h.buildResponseData(c.Request(), httpReq, ipInfo)
 
+	// Personalized per client IP — never share through caches.
+	c.Response().Header().Set("Cache-Control", "private, no-store")
+
 	var writeErr error
 	req := c.Request()
 	if wantsHTMLResponse(req.UserAgent(), req.Header.Get("Accept")) {

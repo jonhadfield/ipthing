@@ -2,20 +2,23 @@
   "name": "IPThing",
   "short_name": "IPThing",
   "description": "See your public IP address, HTTP headers, and TLS details",
+  "lang": "en",
+  "id": "https://ipthing.net/",
+  "start_url": "https://ipthing.net/",
+  "scope": "https://ipthing.net/",
   "icons": [
     {
-      "src": "/android-chrome-192x192.png",
+      "src": "https://ipthing.net/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/android-chrome-512x512.png",
+      "src": "https://ipthing.net/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
   "theme_color": "#000000",
   "background_color": "#000000",
-  "display": "standalone",
-  "start_url": "/"
+  "display": "standalone"
 }

@@ -1,0 +1,27 @@
+# IPThing
+
+> Shows your public IP address and the HTTP/TLS details of the connection to this host. No ads, no JavaScript. Browser HTML or curl JSON.
+
+The address labelled IP Address is the TCP or QUIC peer (RemoteAddr). X-Forwarded-For and similar headers are display metadata only and are never trusted as the client IP. The service runs on the public internet with no reverse proxy.
+
+## Pages
+
+- Home (live inspector): https://ipthing.net/
+- curl / JSON examples: https://ipthing.net/curl
+- IPv6 vs IPv4: https://ipthing.net/ipv6
+- Request headers: https://ipthing.net/headers
+- TLS / HTTP/3 / JA3 / JA4: https://ipthing.net/tls
+- Privacy: https://ipthing.net/privacy
+- Aggregate traffic stats: https://stats.ipthing.net/
+- Source: https://github.com/jonhadfield/ipthing
+
+## CLI
+
+```
+curl https://ipthing.net
+curl -4 https://ipthing.net
+curl -6 https://ipthing.net
+curl -s https://ipthing.net | jq -r .IPAddr
+```
+
+Non-browser clients (typical curl Accept: */*) receive pretty-printed JSON. Browser User-Agents, or Accept preferring text/html, receive HTML.

@@ -5,20 +5,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>What Is My IP Address? — IPThing</title>
-    <meta name="description" content="What is my IP? See your public IP address instantly, plus location, ISP, HTTP headers and TLS details. No ads, no JavaScript, and JSON for curl.">
+    <meta name="description" content="What is my IP? See your public IP instantly — the real TCP/QUIC peer, not X-Forwarded-For — plus location, ISP, headers, TLS and JA4. No ads, no JavaScript; curl gets JSON.">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="https://ipthing.net/">
     <meta property="og:site_name" content="IPThing">
     <meta property="og:title" content="What Is My IP Address? — IPThing">
-    <meta property="og:description" content="See your public IP address, location, ISP, HTTP headers and TLS details. Browser HTML or curl for JSON.">
+    <meta property="og:description" content="See your public IP (TCP/QUIC peer), location, ISP, headers, TLS and JA4. No ads, no JavaScript. curl gets JSON.">
     <meta property="og:url" content="https://ipthing.net/">
     <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
     <meta property="og:image" content="https://ipthing.net/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="IPThing: What is my IP address? ipthing.net">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="What Is My IP Address? — IPThing">
+    <meta name="twitter:description" content="See your public IP (TCP/QUIC peer), location, ISP, headers, TLS and JA4. No ads, no JavaScript. curl gets JSON.">
     <meta name="twitter:image" content="https://ipthing.net/og-image.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -29,12 +31,35 @@
         "@context": "https://schema.org",
         "@graph": [
             {
-                "@type": "WebApplication",
+                "@type": "Organization",
+                "@id": "https://ipthing.net/#organization",
                 "name": "IPThing",
                 "url": "https://ipthing.net/",
-                "description": "Shows your public IP address, approximate location, ISP, HTTP request headers and TLS details.",
+                "logo": "https://ipthing.net/android-chrome-512x512.png",
+                "sameAs": [
+                    "https://github.com/jonhadfield/ipthing",
+                    "https://stats.ipthing.net/"
+                ]
+            },
+            {
+                "@type": "WebSite",
+                "@id": "https://ipthing.net/#website",
+                "url": "https://ipthing.net/",
+                "name": "IPThing",
+                "description": "What is my IP address? Public IP, location, headers and TLS for the connection you made.",
+                "publisher": {"@id": "https://ipthing.net/#organization"},
+                "inLanguage": "en"
+            },
+            {
+                "@type": "WebApplication",
+                "@id": "https://ipthing.net/#app",
+                "name": "IPThing",
+                "url": "https://ipthing.net/",
+                "description": "Shows your public IP address as the TCP or QUIC peer, approximate location, ISP, HTTP request headers and TLS details including JA3/JA4. No ads and no JavaScript.",
                 "applicationCategory": "UtilitiesApplication",
-                "operatingSystem": "Any"
+                "operatingSystem": "Any",
+                "isAccessibleForFree": true,
+                "publisher": {"@id": "https://ipthing.net/#organization"}
             },
             {
                 "@type": "FAQPage",
@@ -77,7 +102,7 @@
                         "name": "Does IPThing support IPv4 and IPv6?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Yes. IPv4 addresses look like 203.0.113.7; IPv6 addresses look like 2001:db8::1. If your connection has IPv6, your device will usually prefer it. Use curl -4 or curl -6 to force a family."
+                            "text": "Yes. IPv4 addresses look like 203.0.113.7; IPv6 addresses look like 2001:db8::1. If your connection has IPv6, your device will usually prefer it. Use curl -4 or curl -6 to force a family. Details: https://ipthing.net/ipv6"
                         }
                     },
                     {
@@ -85,7 +110,7 @@
                         "name": "How do I check my IP from the command line?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Run curl https://ipthing.net for JSON with your IP address, location and request details. Add -4 or -6 to check IPv4 or IPv6 specifically."
+                            "text": "Run curl https://ipthing.net for JSON with your IP address, location and request details. Add -4 or -6 to check IPv4 or IPv6 specifically. Examples: https://ipthing.net/curl"
                         }
                     }
                 ]
@@ -161,11 +186,12 @@
     </style>
 </head>
 <body>
+<main>
 <div class="intro">
     <h1>What is my IP address?</h1>
     <p class="ip-label">Your public IP address is</p>
     <p class="ip">{{ .IPAddr }}</p>
-    <p>This is the address websites see when you connect to them. It is the TCP or QUIC peer, not <code>X-Forwarded-For</code>. Below are its approximate location and network, plus the HTTP headers and TLS details your browser sent. Run <code>curl https://ipthing.net</code> for the same data as JSON.</p>
+    <p>This is the address websites see when you connect to them. It is the TCP or QUIC peer, not <code>X-Forwarded-For</code>. Below are its approximate location and network, plus the HTTP headers and TLS details (including JA3/JA4) your browser sent. No ads and no JavaScript. Run <code>curl https://ipthing.net</code> for the same data as JSON.</p>
 </div>
 <table>
     <tbody>
@@ -583,9 +609,10 @@
 
     <h2>How do I check my IP from the command line?</h2>
     <pre>curl https://ipthing.net</pre>
-    <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser. Add <code>-4</code> or <code>-6</code> to check your IPv4 or IPv6 address specifically. More examples: <a href="/curl">curl JSON</a>, <a href="/headers">request headers</a>, <a href="/tls">TLS / JA3 / JA4</a>.</p>
+    <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser. Add <code>-4</code> or <code>-6</code> to check your IPv4 or IPv6 address specifically. More examples: <a href="/curl">curl JSON</a>, <a href="/ipv6">IPv6</a>, <a href="/headers">request headers</a>, <a href="/tls">TLS / JA3 / JA4</a>.</p>
 </div>
-<p style="text-align:center;font-family:monospace;margin-top:2rem;">
+</main>
+<nav aria-label="Site" style="text-align:center;font-family:monospace;margin-top:2rem;">
     <a href="/curl" style="color:#9cf;">curl</a>
     ·
     <a href="/ipv6" style="color:#9cf;">IPv6</a>
@@ -599,7 +626,7 @@
     <a href="/privacy" style="color:#9cf;">Privacy</a>
     ·
     <a href="https://github.com/jonhadfield/ipthing" style="color:#9cf;">Source</a>
-</p>
+</nav>
 </body>
 </html>
 

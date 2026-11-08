@@ -11,9 +11,31 @@
     <meta property="og:url" content="https://ipthing.net/privacy">
     <meta property="og:image:alt" content="IPThing privacy notice">
     <meta name="twitter:title" content="Privacy — IPThing">
+    <meta name="twitter:description" content="How IPThing handles request metadata: what is stored, retention, and the aggregate stats report.">
     {{template "docs-style"}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://ipthing.net/"},
+                    {"@type": "ListItem", "position": 2, "name": "Privacy", "item": "https://ipthing.net/privacy"}
+                ]
+            },
+            {
+                "@type": "WebPage",
+                "name": "Privacy — IPThing",
+                "url": "https://ipthing.net/privacy",
+                "description": "How IPThing handles request metadata: what is stored, retention, and the aggregate stats report."
+            }
+        ]
+    }
+    </script>
 </head>
 <body>
+<main>
 <h1>Privacy</h1>
 <p>IPThing shows you details of the HTTP connection you made to this service (IP address, headers, TLS, and related metadata). That is the product.</p>
 
@@ -30,7 +52,7 @@
 
 <h2>Purpose</h2>
 <p>Processing is for providing the inspection service you requested, securing and operating the service, and understanding usage patterns. If you are in the EEA/UK and have questions about personal data held about your visits, contact the service operator.</p>
-
+</main>
 {{template "site-footer"}}
 </body>
 </html>

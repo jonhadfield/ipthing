@@ -11,6 +11,7 @@ HTTP request inspector. Open **[https://ipthing.net](https://ipthing.net)** in a
 | TLS / JA3 / JA4 | [https://ipthing.net/tls](https://ipthing.net/tls) |
 | Traffic stats | **[https://stats.ipthing.net](https://stats.ipthing.net)** |
 | Privacy | [https://ipthing.net/privacy](https://ipthing.net/privacy) |
+| For AI crawlers | [https://ipthing.net/llms.txt](https://ipthing.net/llms.txt) |
 | Source | [github.com/jonhadfield/ipthing](https://github.com/jonhadfield/ipthing) |
 
 This is the Go service behind those URLs. It is not the unrelated 2006 Windows tool also named IPThing.
@@ -113,7 +114,7 @@ make govulncheck
 make build                 # .local_dist/
 ```
 
-Templates, favicons, `robots.txt`, and `sitemap.xml` are embedded at compile time. There are no runtime file dependencies.
+Templates, favicons, `robots.txt`, `sitemap.xml`, and `llms.txt` are embedded at compile time. There are no runtime file dependencies.
 
 ## Configuration
 

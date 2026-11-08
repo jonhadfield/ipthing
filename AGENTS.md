@@ -4,7 +4,7 @@ IPThing shows clients their connection details (IP, headers, TLS). See `CLAUDE.m
 
 ## Deployment: no reverse proxy
 
-Production runs as a process on a **virtual machine** (DigitalOcean droplet), not in a container or Kubernetes. A Docker image exists for packaging/CI scanning, but that is not how ipthing.net is deployed.
+Production runs as a process on a **virtual machine** (Contabo), not in a container or Kubernetes. A Docker image exists for packaging/CI scanning, but that is not how ipthing.net is deployed.
 
 Run this service **directly on the public interface** (or with TLS terminated on the process itself via AutoTLS). Do **not** put nginx, Caddy, a cloud LB, or similar in front.
 
@@ -14,7 +14,7 @@ When changing IP extraction, middleware, or Echo `IPExtractor`, preserve direct-
 
 ## Protocols
 
-HTTPS serves HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on **UDP 443** and is advertised via `Alt-Svc`. Allow UDP/443 on both the host firewall and any DigitalOcean Cloud Firewall (or equivalent) in front of the droplet — host rules alone are not enough if the cloud firewall drops UDP.
+HTTPS serves HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on **UDP 443** and is advertised via `Alt-Svc`. Allow UDP/443 on both the host firewall and any cloud firewall in front of the VM — host rules alone are not enough if the cloud firewall drops UDP.
 
 ## Hostnames and redirects
 
@@ -36,7 +36,7 @@ These limits exist to keep a public inspector from being an easy resource sink:
 - Operational request logs omit client IP, User-Agent, and query strings (analytics stay in the DB when configured)
 - CI runs tests + `govulncheck`; `make release-docker` scans the image with Trivy before push
 
-Crawl aids: `/robots.txt`, `/sitemap.xml`, and HTML meta/canonical on `/`, `/curl`, `/ipv6`, `/headers`, `/tls`, and `/privacy`. Docs HTML routes accept HEAD (200, empty body) so crawlers that probe with HEAD are not 405'd. Register the site in Google Search Console after deploy. Responses include `X-IPThing-Version: <tag>-<sha>` (from build ldflags).
+Crawl aids: `/robots.txt`, `/sitemap.xml`, `/llms.txt`, and HTML meta/canonical on `/`, `/curl`, `/ipv6`, `/headers`, `/tls`, and `/privacy`. Docs HTML routes accept HEAD (200, empty body) so crawlers that probe with HEAD are not 405'd. Register the site in Google Search Console after deploy. Responses include `X-IPThing-Version: <tag>-<sha>` (from build ldflags).
 
 Privacy wording lives in `PRIVACY.md` and `/privacy`. Retention is indefinite by design; do not add automatic purge unless the operator asks.
 
