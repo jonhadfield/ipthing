@@ -32,7 +32,7 @@
                         "name": "How do I get my public IP with curl?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Run curl https://ipthing.net. Non-browser clients receive JSON. The IPAddr field is your public address. Use jq -r .IPAddr to print only that value."
+                            "text": "Run curl https://ipthing.net for JSON, or curl https://ipthing.net/ip for the address alone as plain text. The IPAddr field in JSON is your public address."
                         }
                     },
                     {
@@ -64,7 +64,9 @@
 
 <h2>How do I get my public IP with curl?</h2>
 <pre>curl https://ipthing.net</pre>
-<p>Non-browser clients receive JSON. Print only the address:</p>
+<p>Non-browser clients receive JSON. For the address alone as plain text:</p>
+<pre>curl -s https://ipthing.net/ip</pre>
+<p>Or extract it from JSON:</p>
 <pre>curl -s https://ipthing.net | jq -r .IPAddr</pre>
 <p>Field names are PascalCase and match the labels on the HTML page. <code>IPAddr</code> is the TCP or QUIC peer — not <code>X-Forwarded-For</code>.</p>
 

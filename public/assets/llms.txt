@@ -7,6 +7,7 @@ The address labelled IP Address is the TCP or QUIC peer (RemoteAddr). X-Forwarde
 ## Pages
 
 - Home (live inspector): https://ipthing.net/
+- Plain-text IP only: https://ipthing.net/ip
 - curl / JSON examples: https://ipthing.net/curl
 - IPv6 vs IPv4: https://ipthing.net/ipv6
 - Request headers: https://ipthing.net/headers
@@ -19,9 +20,10 @@ The address labelled IP Address is the TCP or QUIC peer (RemoteAddr). X-Forwarde
 
 ```
 curl https://ipthing.net
+curl https://ipthing.net/ip
 curl -4 https://ipthing.net
 curl -6 https://ipthing.net
 curl -s https://ipthing.net | jq -r .IPAddr
 ```
 
-Non-browser clients (typical curl Accept: */*) receive pretty-printed JSON. Browser User-Agents, or Accept preferring text/html, receive HTML.
+`/ip` returns the peer address as `text/plain` (trailing newline). Non-browser clients on `/` (typical curl Accept: */*) receive pretty-printed JSON. Browser User-Agents, or Accept preferring text/html, receive HTML.

@@ -368,11 +368,17 @@ func (app *Application) setupRoutes(e *echo.Echo) {
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/ipv6", app.viewHandler("ipv6"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/headers", app.viewHandler("headers"))
 	e.Match([]string{http.MethodGet, http.MethodHead}, "/tls", app.viewHandler("tls"))
+	e.Match([]string{http.MethodGet, http.MethodHead}, "/ip", app.ipHandler)
 
 	// Accept Echo's built-in Any methods plus common scanner/WebDAV verbs.
 	// Truly unknown methods still reach rootMethodFallback on 405 for "/".
 	e.Any("/", app.rootHandler)
 	e.Match(extraRootMethods, "/", app.rootHandler)
+}
+
+// ipHandler returns the peer IP as text/plain.
+func (app *Application) ipHandler(c echo.Context) error {
+	return app.handler.HandleIP(c)
 }
 
 // viewHandler renders a named HTML template with no request data.

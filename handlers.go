@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,6 +55,35 @@ func (h *Handler) HandleRoot(c echo.Context) error {
 	return writeErr
 }
 
+// HandleIP returns only the peer IP as text/plain (trailing newline).
+func (h *Handler) HandleIP(c echo.Context) error {
+	start := time.Now()
+
+	httpReq, _, err := h.requestProcessor.ProcessRequest(c)
+	if err != nil {
+		return err
+	}
+
+	c.Response().Header().Set("Cache-Control", "private, no-store")
+	httpReq.ResponseFormat = "text"
+	body := httpReq.IP + "\n"
+
+	var writeErr error
+	if c.Request().Method == http.MethodHead {
+		c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextPlainCharsetUTF8)
+		c.Response().Header().Set(echo.HeaderContentLength, strconv.Itoa(len(body)))
+		writeErr = c.NoContent(http.StatusOK)
+	} else {
+		writeErr = c.String(http.StatusOK, body)
+	}
+
+	httpReq.StatusCode = http.StatusOK
+	httpReq.DurationMs = time.Since(start).Milliseconds()
+	h.requestProcessor.QueueStore(httpReq)
+
+	return writeErr
+}
+
 // headerEntry is one request header for JSON/HTML (values may be redacted).
 type headerEntry struct {
 	Name   string   `json:"name"`
@@ -74,21 +104,21 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"Language":       req.Header.Get("Language"),
 		"Referer":        req.Header.Get("Referer"),
 		"Method":         req.Method,
-		"MIMEType":       req.Header.Get("Content-Type"),
-		"Charset":        req.Header.Get("Charset"),
-		"XFF":            req.Header.Get("X-Forwarded-For"),
-		"XRI":            req.Header.Get("X-Real-IP"),
-		"Proto":          httpReq.Proto,
-		"ContentLength":  httpReq.ContentLength,
-		"RemoteAddr":     httpReq.RemoteAddr,
-		"RequestURI":     httpReq.RequestURI,
-		"Scheme":         httpReq.Scheme,
-		"Country":        "",
-		"City":           "",
-		"Org":            "",
-		"Visitor":        "",
+		"MIMEType":      req.Header.Get("Content-Type"),
+		"Charset":       req.Header.Get("Charset"),
+		"Proto":         httpReq.Proto,
+		"ContentLength": httpReq.ContentLength,
+		"RemoteAddr":    httpReq.RemoteAddr,
+		"RequestURI":    httpReq.RequestURI,
+		"Scheme":        httpReq.Scheme,
 	}
 
+	if xff := req.Header.Get("X-Forwarded-For"); xff != "" {
+		data["XFF"] = xff
+	}
+	if xri := req.Header.Get("X-Real-IP"); xri != "" {
+		data["XRI"] = xri
+	}
 	if httpReq.PTRHostname != "" {
 		data["PTRHostname"] = httpReq.PTRHostname
 	}

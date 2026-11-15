@@ -65,6 +65,10 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, "Does IPThing trust X-Forwarded-For?")
 	assert.Contains(t, body, "never used as the client IP")
 	assert.Contains(t, body, "TCP or QUIC peer")
+	assert.Contains(t, body, ">Network</td>")
+	assert.Contains(t, body, ">Request</td>")
+	assert.Contains(t, body, "curl https://ipthing.net/ip")
+	assert.NotContains(t, body, ">X-Forwarded-For</td>")
 	ldStart := strings.Index(body, `<script type="application/ld+json">`)
 	require.Greater(t, ldStart, -1)
 	ld := body[ldStart+len(`<script type="application/ld+json">`):]
@@ -338,6 +342,7 @@ func TestSEOStaticRoutes(t *testing.T) {
 		assert.Contains(t, rec.Header().Get("Content-Type"), "text/plain")
 		body := rec.Body.String()
 		assert.Contains(t, body, "https://ipthing.net/")
+		assert.Contains(t, body, "https://ipthing.net/ip")
 		assert.Contains(t, body, "https://ipthing.net/ipv6")
 		assert.Equal(t, "public, max-age=3600", rec.Header().Get("Cache-Control"))
 		assertAssetHEAD(t, e, "/llms.txt", rec)
@@ -361,6 +366,50 @@ func assertAssetHEAD(t *testing.T, e *echo.Echo, path string, getRec *httptest.R
 	assert.Empty(t, rec.Body.String())
 	assert.Equal(t, getRec.Header().Get("Content-Type"), rec.Header().Get("Content-Type"))
 	assert.Equal(t, strconv.Itoa(getRec.Body.Len()), rec.Header().Get("Content-Length"))
+}
+
+func TestHandleIP_PlainText(t *testing.T) {
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPDirect()
+
+	req := httptest.NewRequest(http.MethodGet, "/ip", nil)
+	req.RemoteAddr = "203.0.113.50:54321"
+	req.Header.Set("User-Agent", "curl/8.0.0")
+	req.Header.Set("X-Forwarded-For", "198.51.100.2")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	handler := NewHandler(NewRequestProcessor(&NoOpDB{}, false, e.Logger))
+	require.NoError(t, handler.HandleIP(c))
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "text/plain")
+	assert.Equal(t, "private, no-store", rec.Header().Get("Cache-Control"))
+	assert.Equal(t, "203.0.113.50\n", rec.Body.String())
+}
+
+func TestHandleIP_ViaRouteAndHEAD(t *testing.T) {
+	app := &Application{
+		handler: NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil)),
+	}
+	e := app.setupServer()
+
+	req := httptest.NewRequest(http.MethodGet, "/ip", nil)
+	req.RemoteAddr = "198.51.100.9:9999"
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "198.51.100.9\n", rec.Body.String())
+
+	// HEAD must use the same peer; assertAssetHEAD omits RemoteAddr.
+	headReq := httptest.NewRequest(http.MethodHead, "/ip", nil)
+	headReq.RemoteAddr = "198.51.100.9:9999"
+	headRec := httptest.NewRecorder()
+	e.ServeHTTP(headRec, headReq)
+	assert.Equal(t, http.StatusOK, headRec.Code)
+	assert.Empty(t, headRec.Body.String())
+	assert.Equal(t, rec.Header().Get("Content-Type"), headRec.Header().Get("Content-Type"))
+	assert.Equal(t, strconv.Itoa(rec.Body.Len()), headRec.Header().Get("Content-Length"))
 }
 
 func TestHandleRoot_JSONResponse(t *testing.T) {
@@ -396,6 +445,9 @@ func TestHandleRoot_JSONResponse(t *testing.T) {
 	assert.Equal(t, "203.0.113.50", responseData["IPAddr"])
 	assert.Equal(t, "curl/7.68.0", responseData["UserAgent"])
 	assert.Equal(t, "198.51.100.2", responseData["XFF"])
+	assert.Equal(t, "198.51.100.1", responseData["CfConnectingIP"])
+	_, hasVisitor := responseData["Visitor"]
+	assert.False(t, hasVisitor, "empty Visitor must be omitted")
 }
 
 func TestHandleRoot_AcceptPrefersHTML(t *testing.T) {

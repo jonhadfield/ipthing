@@ -5,6 +5,7 @@ HTTP request inspector. Open **[https://ipthing.net](https://ipthing.net)** in a
 | | URL |
 | --- | --- |
 | Live service | **[https://ipthing.net](https://ipthing.net)** |
+| Plain-text IP | [https://ipthing.net/ip](https://ipthing.net/ip) |
 | curl / JSON | [https://ipthing.net/curl](https://ipthing.net/curl) |
 | IPv6 | [https://ipthing.net/ipv6](https://ipthing.net/ipv6) |
 | Request headers | [https://ipthing.net/headers](https://ipthing.net/headers) |
@@ -36,6 +37,9 @@ open https://ipthing.net
 
 # JSON (curl, wget, scripts)
 curl https://ipthing.net
+
+# Plain-text IP only
+curl https://ipthing.net/ip
 
 # Force address family
 curl -4 https://ipthing.net
@@ -153,7 +157,7 @@ make build-docker
 docker pull ghcr.io/jonhadfield/ipthing:latest
 ```
 
-The container listens according to config (defaults HTTP 8080 / HTTPS 443). The Dockerfile `EXPOSE 1323` line is leftover and is not the listen port.
+The container listens according to config (defaults HTTP 8080 / HTTPS 443). The image `EXPOSE`s 8080 and 443 (TCP and UDP); templates and assets are embedded in the binary.
 
 ## Hardening
 

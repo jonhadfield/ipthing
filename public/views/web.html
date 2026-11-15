@@ -110,7 +110,7 @@
                         "name": "How do I check my IP from the command line?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Run curl https://ipthing.net for JSON with your IP address, location and request details. Add -4 or -6 to check IPv4 or IPv6 specifically. Examples: https://ipthing.net/curl"
+                            "text": "Run curl https://ipthing.net for JSON with your IP address, location and request details, or curl https://ipthing.net/ip for the address alone as plain text. Add -4 or -6 to check IPv4 or IPv6 specifically. Examples: https://ipthing.net/curl"
                         }
                     }
                 ]
@@ -175,13 +175,21 @@
         table td:first-child {
             white-space: nowrap;
         }
-        table tfoot {
+        tr.section td {
+            color: #aaa;
             font-weight: bold;
+            padding-top: 1.25rem;
+            border-top: 1px solid #333;
+        }
+        tr.section:first-child td {
+            border-top: none;
+            padding-top: 4px;
         }
         @media (max-width: 600px) {
             body { padding: 12px; }
             table td, table th { padding: 3px 4px; }
             table td:first-child { white-space: normal; overflow-wrap: normal; width: 35%; }
+            tr.section td { padding-top: 1rem; }
         }
     </style>
 </head>
@@ -191,10 +199,13 @@
     <h1>What is my IP address?</h1>
     <p class="ip-label">Your public IP address is</p>
     <p class="ip">{{ .IPAddr }}</p>
-    <p>This is the address websites see when you connect to them. It is the TCP or QUIC peer, not <code>X-Forwarded-For</code>. Below are its approximate location and network, plus the HTTP headers and TLS details (including JA3/JA4) your browser sent. No ads and no JavaScript. Run <code>curl https://ipthing.net</code> for the same data as JSON.</p>
+    <p>This is the address websites see when you connect to them. It is the TCP or QUIC peer, not <code>X-Forwarded-For</code>. Below are its approximate location and network, plus the HTTP headers and TLS details (including JA3/JA4) your browser sent. No ads and no JavaScript. Run <code>curl https://ipthing.net</code> for JSON, or <code>curl https://ipthing.net/ip</code> for the address alone.</p>
 </div>
 <table>
     <tbody>
+    <tr class="section">
+        <td colspan="2">Network</td>
+    </tr>
     <tr>
         <td>IP Address</td>
         <td>{{ .IPAddr }}</td>
@@ -223,20 +234,24 @@
         <td>{{ .Bogon }}</td>
     </tr>
     {{ end }}
+    {{ if .Country }}
     <tr>
         <td>Country</td>
         <td>{{ .Country }}</td>
     </tr>
+    {{ end }}
     {{ if .Region }}
     <tr>
         <td>Region</td>
         <td>{{ .Region }}</td>
     </tr>
     {{ end }}
+    {{ if .City }}
     <tr>
         <td>City</td>
         <td>{{ .City }}</td>
     </tr>
+    {{ end }}
     {{ if .Postal }}
     <tr>
         <td>Postal Code</td>
@@ -255,23 +270,35 @@
         <td>{{ .Timezone }}</td>
     </tr>
     {{ end }}
+    {{ if .Org }}
     <tr>
         <td>Organization</td>
         <td>{{ .Org }}</td>
     </tr>
+    {{ end }}
+    {{ if or .Visitor .XFF .XRI .CfConnectingIP .TrueClientIP .Via .Forwarded .CFRay .CFRequestID }}
+    <tr class="section">
+        <td colspan="2">Forwarding headers (not trusted as client IP)</td>
+    </tr>
+    {{ end }}
+    {{ if .Visitor }}
     <tr>
         <td>Visitor</td>
         <td>{{ .Visitor }}</td>
     </tr>
+    {{ end }}
+    {{ if .XFF }}
     <tr>
         <td>X-Forwarded-For</td>
         <td>{{ .XFF }}</td>
     </tr>
-
+    {{ end }}
+    {{ if .XRI }}
     <tr>
         <td>X-Real-IP</td>
         <td>{{ .XRI }}</td>
     </tr>
+    {{ end }}
     {{ if .CfConnectingIP }}
     <tr>
         <td>Cf-Connecting-Ip</td>
@@ -284,6 +311,33 @@
         <td>{{ .TrueClientIP }}</td>
     </tr>
     {{ end }}
+    {{ if .Via }}
+    <tr>
+        <td>Via (Proxy Chain)</td>
+        <td>{{ .Via }}</td>
+    </tr>
+    {{ end }}
+    {{ if .Forwarded }}
+    <tr>
+        <td>Forwarded</td>
+        <td>{{ .Forwarded }}</td>
+    </tr>
+    {{ end }}
+    {{ if .CFRay }}
+    <tr>
+        <td>CF-Ray</td>
+        <td>{{ .CFRay }}</td>
+    </tr>
+    {{ end }}
+    {{ if .CFRequestID }}
+    <tr>
+        <td>CF-Request-ID</td>
+        <td>{{ .CFRequestID }}</td>
+    </tr>
+    {{ end }}
+    <tr class="section">
+        <td colspan="2">Request</td>
+    </tr>
     <tr>
         <td>Method</td>
         <td>{{ .Method }}</td>
@@ -494,30 +548,6 @@
         <td>{{ range $i, $n := .CookieNames }}{{ if $i }}, {{ end }}{{ $n }}{{ end }}</td>
     </tr>
     {{ end }}
-    {{ if .Via }}
-    <tr>
-        <td>Via (Proxy Chain)</td>
-        <td>{{ .Via }}</td>
-    </tr>
-    {{ end }}
-    {{ if .Forwarded }}
-    <tr>
-        <td>Forwarded</td>
-        <td>{{ .Forwarded }}</td>
-    </tr>
-    {{ end }}
-    {{ if .CFRay }}
-    <tr>
-        <td>CF-Ray</td>
-        <td>{{ .CFRay }}</td>
-    </tr>
-    {{ end }}
-    {{ if .CFRequestID }}
-    <tr>
-        <td>CF-Request-ID</td>
-        <td>{{ .CFRequestID }}</td>
-    </tr>
-    {{ end }}
     <tr>
         <td>Request Timestamp</td>
         <td>{{ .Timestamp }}</td>
@@ -530,6 +560,11 @@
                 {{ $key }}: {{ range $values }}{{ . }} {{ end }}<br>
             {{ end }}
         </td>
+    </tr>
+    {{ end }}
+    {{ if or .TLSVersion .JA3 .JA4 }}
+    <tr class="section">
+        <td colspan="2">TLS</td>
     </tr>
     {{ end }}
     {{ if .TLSVersion }}
@@ -579,8 +614,8 @@
     </tr>
     {{ end }}
     {{ if .Headers }}
-    <tr>
-        <td colspan="2">Request Headers</td>
+    <tr class="section">
+        <td colspan="2">Request headers</td>
     </tr>
     {{ range .Headers }}
     <tr>
@@ -608,8 +643,9 @@
     <p>IPv4 addresses look like <code>203.0.113.7</code>; IPv6 addresses look like <code>2001:db8::1</code>. IPThing accepts both. If your connection has IPv6, your device will usually prefer it, so you will see your IPv6 address; otherwise you will see your IPv4 address. More detail: <a href="/ipv6">IPv6 address check</a>.</p>
 
     <h2>How do I check my IP from the command line?</h2>
-    <pre>curl https://ipthing.net</pre>
-    <p>This returns JSON with your IP address, location and request details, which is useful in scripts and on servers without a browser. Add <code>-4</code> or <code>-6</code> to check your IPv4 or IPv6 address specifically. More examples: <a href="/curl">curl JSON</a>, <a href="/ipv6">IPv6</a>, <a href="/headers">request headers</a>, <a href="/tls">TLS / JA3 / JA4</a>.</p>
+    <pre>curl https://ipthing.net
+curl https://ipthing.net/ip</pre>
+    <p>The first returns JSON with your IP address, location and request details. <code>/ip</code> returns only the address as plain text. Both are useful in scripts and on servers without a browser. Add <code>-4</code> or <code>-6</code> to check your IPv4 or IPv6 address specifically. More examples: <a href="/curl">curl JSON</a>, <a href="/ipv6">IPv6</a>, <a href="/headers">request headers</a>, <a href="/tls">TLS / JA3 / JA4</a>.</p>
 </div>
 </main>
 <nav aria-label="Site" style="text-align:center;font-family:monospace;margin-top:2rem;">

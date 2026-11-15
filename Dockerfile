@@ -19,14 +19,13 @@ WORKDIR /app
 
 RUN go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}' -X 'main.buildTag=${BUILD_TAG}' -X 'main.buildSHA=${BUILD_SHA}'" -o /out/server .
 
-### ✅ This was missing before!
 FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
 
 LABEL maintainer="Jon Hadfield jon@lessknown.co.uk"
 
-COPY public /app/public
 WORKDIR /app
 COPY --from=builder /out/server /app/server
 
-EXPOSE 1323
+# Defaults match config (HTTP 8080 / HTTPS 443). UDP 443 is HTTP/3 when AutoTLS is enabled.
+EXPOSE 8080 443/tcp 443/udp
 ENTRYPOINT ["/app/server"]
