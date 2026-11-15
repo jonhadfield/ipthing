@@ -12,7 +12,7 @@ require (
 	github.com/quic-go/quic-go v0.65.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.58.0
-	modernc.org/sqlite v1.61.0
+	modernc.org/sqlite v1.61.1
 )
 
 require (
