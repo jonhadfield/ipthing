@@ -6,6 +6,8 @@ HTTP request inspector. Open **[https://ipthing.net](https://ipthing.net)** in a
 | --- | --- |
 | Live service | **[https://ipthing.net](https://ipthing.net)** |
 | Plain-text IP | [https://ipthing.net/ip](https://ipthing.net/ip) |
+| IPv4-only host | [https://ipv4.ipthing.net](https://ipv4.ipthing.net) |
+| IPv6-only host | [https://ipv6.ipthing.net](https://ipv6.ipthing.net) |
 | curl / JSON | [https://ipthing.net/curl](https://ipthing.net/curl) |
 | IPv6 | [https://ipthing.net/ipv6](https://ipthing.net/ipv6) |
 | Request headers | [https://ipthing.net/headers](https://ipthing.net/headers) |
@@ -41,9 +43,11 @@ curl https://ipthing.net
 # Plain-text IP only
 curl https://ipthing.net/ip
 
-# Force address family
+# Force address family (curl flags, or dedicated hosts)
 curl -4 https://ipthing.net
 curl -6 https://ipthing.net
+curl https://ipv4.ipthing.net
+curl https://ipv6.ipthing.net
 
 # HTTP without TLS
 curl http://ipthing.net
@@ -76,7 +80,7 @@ Run this process on the public interface (or terminate TLS on the process with A
 
 HTTPS is HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on **UDP 443** and is advertised with `Alt-Svc`. Allow UDP/443 on the host firewall **and** any cloud firewall, or HTTP/3 will not reach the process.
 
-`www.ipthing.net` 301s to the apex and keeps the scheme. There is no HTTP→HTTPS redirect and no HSTS.
+`www.ipthing.net` 301s to the apex and keeps the scheme. There is no HTTP→HTTPS redirect and no HSTS. `ipv4.ipthing.net` is A-only and `ipv6.ipthing.net` is AAAA-only, so browsers and clients that hit those names use that address family without `curl -4`/`-6`.
 
 ## Traffic stats
 
@@ -92,7 +96,7 @@ Details: [PRIVACY.md](PRIVACY.md) and [https://ipthing.net/privacy](https://ipth
 
 ## Run locally
 
-Requires Go 1.26.10 or later (see `go.mod`).
+Requires Go 1.26.11 or later (see `go.mod`).
 
 ```bash
 git clone https://github.com/jonhadfield/ipthing.git
@@ -139,7 +143,7 @@ Example `config.json`:
 {
   "listenPortHTTP": 8080,
   "listenPortHTTPS": 443,
-  "hostWhitelist": ["ipthing.net", "www.ipthing.net"],
+  "hostWhitelist": ["ipthing.net", "www.ipthing.net", "ipv4.ipthing.net", "ipv6.ipthing.net"],
   "databaseType": "sqlite",
   "databasePath": "/var/lib/ipthing/ipthing.db"
 }

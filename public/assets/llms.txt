@@ -8,6 +8,8 @@ The address labelled IP Address is the TCP or QUIC peer (RemoteAddr). X-Forwarde
 
 - Home (live inspector): https://ipthing.net/
 - Plain-text IP only: https://ipthing.net/ip
+- IPv4-only host: https://ipv4.ipthing.net/
+- IPv6-only host: https://ipv6.ipthing.net/
 - curl / JSON examples: https://ipthing.net/curl
 - IPv6 vs IPv4: https://ipthing.net/ipv6
 - Request headers: https://ipthing.net/headers
@@ -23,7 +25,9 @@ curl https://ipthing.net
 curl https://ipthing.net/ip
 curl -4 https://ipthing.net
 curl -6 https://ipthing.net
+curl https://ipv4.ipthing.net
+curl https://ipv6.ipthing.net
 curl -s https://ipthing.net | jq -r .IPAddr
 ```
 
-`/ip` returns the peer address as `text/plain` (trailing newline). Non-browser clients on `/` (typical curl Accept: */*) receive pretty-printed JSON. Browser User-Agents, or Accept preferring text/html, receive HTML.
+`/ip` returns the peer address as `text/plain` (trailing newline). `ipv4.ipthing.net` / `ipv6.ipthing.net` are single-family DNS names. Non-browser clients on `/` (typical curl Accept: */*) receive pretty-printed JSON. Browser User-Agents, or Accept preferring text/html, receive HTML.

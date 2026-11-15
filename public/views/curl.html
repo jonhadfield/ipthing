@@ -72,8 +72,10 @@
 
 <h2>How do I check IPv4 or IPv6 with curl?</h2>
 <pre>curl -4 https://ipthing.net
-curl -6 https://ipthing.net</pre>
-<p>Without <code>-4</code> or <code>-6</code>, curl uses whichever address family DNS prefers. IPThing accepts both. More detail: <a href="/ipv6">IPv6 address check</a>.</p>
+curl -6 https://ipthing.net
+curl https://ipv4.ipthing.net
+curl https://ipv6.ipthing.net</pre>
+<p>Without <code>-4</code> or <code>-6</code>, curl uses whichever address family DNS prefers. The <code>ipv4.</code> / <code>ipv6.</code> hosts are single-family DNS names for browsers and tools that cannot pass those flags. More detail: <a href="/ipv6">IPv6 address check</a>.</p>
 
 <h2>Why does curl get JSON instead of HTML?</h2>
 <p>A browser User-Agent (<code>Mozilla</code>, <code>AppleWebKit</code>, <code>Gecko</code>, …) receives HTML, as does a non-browser client with <code>Accept: text/html</code> preferred over JSON. Typical curl sends <code>Accept: */*</code> and gets pretty-printed JSON.</p>

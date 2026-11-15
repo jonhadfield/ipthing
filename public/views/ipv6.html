@@ -40,7 +40,7 @@
                         "name": "How do I force IPv6 with curl?",
                         "acceptedAnswer": {
                             "@type": "Answer",
-                            "text": "Run curl -6 https://ipthing.net. That forces the IPv6 AAAA record. Use curl -4 for IPv4. Without -4 or -6, curl follows whichever family DNS prefers."
+                            "text": "Run curl -6 https://ipthing.net, or open https://ipv6.ipthing.net (AAAA-only DNS). Use curl -4 or https://ipv4.ipthing.net for IPv4. Without -4 or -6 on the apex, curl follows whichever family DNS prefers."
                         }
                     },
                     {
@@ -67,8 +67,8 @@
 <pre>curl -6 https://ipthing.net
 curl -4 https://ipthing.net</pre>
 <p><code>-6</code> uses IPv6 only; <code>-4</code> uses IPv4 only. Print just the address:</p>
-<pre>curl -6 -s https://ipthing.net | jq -r .IPAddr</pre>
-<p>More curl examples: <a href="/curl">curl JSON</a>.</p>
+<pre>curl -6 -s https://ipthing.net/ip</pre>
+<p>Browsers cannot pass <code>-4</code>/<code>-6</code>. Use the dedicated hosts instead: <a href="https://ipv6.ipthing.net/">ipv6.ipthing.net</a> (AAAA only) and <a href="https://ipv4.ipthing.net/">ipv4.ipthing.net</a> (A only). More curl examples: <a href="/curl">curl JSON</a>.</p>
 
 <h2>Why do I only see IPv4?</h2>
 <p>Your network, VPN, or DNS path may not offer IPv6 to ipthing.net. Many home and mobile networks are still IPv4-only or use IPv6 only for some destinations. <code>curl -6</code> will fail if there is no IPv6 route.</p>

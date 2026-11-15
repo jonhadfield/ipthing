@@ -113,6 +113,10 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"Scheme":        httpReq.Scheme,
 	}
 
+	if hint := familyHostHint(req.Host); hint != "" {
+		data["FamilyHost"] = hint
+	}
+
 	if xff := req.Header.Get("X-Forwarded-For"); xff != "" {
 		data["XFF"] = xff
 	}
@@ -239,6 +243,9 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		}
 		if ipInfo.Loc != "" {
 			data["Loc"] = ipInfo.Loc
+			if mapURL := locMapURL(ipInfo.Loc); mapURL != "" {
+				data["LocMapURL"] = mapURL
+			}
 		}
 		if ipInfo.Hostname != "" {
 			data["Hostname"] = ipInfo.Hostname

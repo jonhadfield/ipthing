@@ -581,6 +581,7 @@ func TestBuildResponseData_WithTLS(t *testing.T) {
 
 func TestBuildResponseData_NewInspectorFields(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "ipv4.ipthing.net"
 	req.Header.Set("Cf-Connecting-Ip", "198.51.100.9")
 	req.Header.Set("Sec-CH-UA-Model", "Pixel")
 	req.Header.Set("Cookie", "a=1; b=2")
@@ -607,9 +608,14 @@ func TestBuildResponseData_NewInspectorFields(t *testing.T) {
 	}
 
 	handler := NewHandler(NewRequestProcessor(&NoOpDB{}, false, nil))
-	data := handler.buildResponseData(req, httpReq, nil)
+	data := handler.buildResponseData(req, httpReq, &IPInfo{
+		Loc: "32.7831,-96.8067",
+	})
 
 	assert.Equal(t, "ipv4", data["IPFamily"])
+	assert.Equal(t, "ipv4", data["FamilyHost"])
+	assert.Equal(t, "32.7831,-96.8067", data["Loc"])
+	assert.Equal(t, "https://www.openstreetmap.org/?mlat=32.7831&mlon=-96.8067#map=10/32.7831/-96.8067", data["LocMapURL"])
 	assert.Equal(t, "host.example.net", data["PTRHostname"])
 	assert.Equal(t, "198.51.100.9", data["CfConnectingIP"])
 	assert.Equal(t, "Pixel", data["SecCHUAModel"])

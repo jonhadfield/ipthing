@@ -18,9 +18,11 @@ HTTPS serves HTTP/1.1 and HTTP/2 on TCP 443. HTTP/3 (QUIC) listens on **UDP 443*
 
 ## Hostnames and redirects
 
-Every hostname the site serves over HTTPS, including `www.ipthing.net`, must be in `IPTHING_HOST_WHITELIST` (`hostWhitelist`). AutoTLS refuses a certificate for any other host, so the TLS handshake fails.
+Every hostname the site serves over HTTPS, including `www.ipthing.net`, `ipv4.ipthing.net`, and `ipv6.ipthing.net`, must be in `IPTHING_HOST_WHITELIST` (`hostWhitelist`). AutoTLS refuses a certificate for any other host, so the TLS handshake fails.
 
 `www.*` gets a 301 to the apex, keeping the scheme (Echo `NonWWWRedirect`). Plain HTTP stays fully available: do not redirect HTTP to HTTPS or send HSTS, as users rely on `http://` (e.g. `curl http://ipthing.net` where TLS is broken). The `rel="canonical"` tag points search engines at `https://ipthing.net/`.
+
+`ipv4.ipthing.net` should be DNS A-only and `ipv6.ipthing.net` AAAA-only (not proxied). The inspector sets `FamilyHost` to `ipv4` or `ipv6` for those Host values so the HTML can label the forced family.
 
 ## Hardening (do not weaken casually)
 
