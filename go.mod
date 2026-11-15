@@ -9,7 +9,7 @@ require (
 	github.com/labstack/echo/v4 v4.16.3
 	github.com/labstack/gommon v0.5.0
 	github.com/lib/pq v1.12.3
-	github.com/quic-go/quic-go v0.64.1
+	github.com/quic-go/quic-go v0.65.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.58.0
 	modernc.org/sqlite v1.61.0
