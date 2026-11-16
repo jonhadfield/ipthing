@@ -60,6 +60,8 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, `aria-label="Site"`)
 	assert.Equal(t, "private, no-store", rec.Header().Get("Cache-Control"))
 	assert.Contains(t, body, "https://stats.ipthing.net/")
+	assert.Contains(t, body, "https://ipv4.ipthing.net/")
+	assert.Contains(t, body, "https://ipv6.ipthing.net/")
 	assert.Contains(t, body, "https://github.com/jonhadfield/ipthing")
 	assert.Contains(t, body, `"@type": "FAQPage"`)
 	assert.Contains(t, body, "Does IPThing trust X-Forwarded-For?")
@@ -199,6 +201,8 @@ func TestDocsPages(t *testing.T) {
 			assert.Contains(t, body, `"@type": "BreadcrumbList"`)
 			assert.Contains(t, body, "<main>")
 			assert.Contains(t, body, "https://stats.ipthing.net/")
+			assert.Contains(t, body, "https://ipv4.ipthing.net/")
+			assert.Contains(t, body, "https://ipv6.ipthing.net/")
 			assert.Equal(t, "public, max-age=600", rec.Header().Get("Cache-Control"))
 		})
 		t.Run(page.path+" HEAD", func(t *testing.T) {

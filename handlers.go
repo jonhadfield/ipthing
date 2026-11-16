@@ -104,13 +104,13 @@ func (h *Handler) buildResponseData(req *http.Request, httpReq *HTTPRequest, ipI
 		"Language":       req.Header.Get("Language"),
 		"Referer":        req.Header.Get("Referer"),
 		"Method":         req.Method,
-		"MIMEType":      req.Header.Get("Content-Type"),
-		"Charset":       req.Header.Get("Charset"),
-		"Proto":         httpReq.Proto,
-		"ContentLength": httpReq.ContentLength,
-		"RemoteAddr":    httpReq.RemoteAddr,
-		"RequestURI":    httpReq.RequestURI,
-		"Scheme":        httpReq.Scheme,
+		"MIMEType":       req.Header.Get("Content-Type"),
+		"Charset":        req.Header.Get("Charset"),
+		"Proto":          httpReq.Proto,
+		"ContentLength":  httpReq.ContentLength,
+		"RemoteAddr":     httpReq.RemoteAddr,
+		"RequestURI":     httpReq.RequestURI,
+		"Scheme":         httpReq.Scheme,
 	}
 
 	if hint := familyHostHint(req.Host); hint != "" {
