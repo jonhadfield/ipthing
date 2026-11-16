@@ -1,4 +1,4 @@
-FROM --platform=linux/x86_64 golang:1.26.11 AS base
+FROM golang:1.26.11 AS base
 
 WORKDIR /src
 
@@ -19,7 +19,7 @@ WORKDIR /app
 
 RUN go build -ldflags "-s -w -X 'main.version=${VERSION_VAR}' -X 'main.buildTag=${BUILD_TAG}' -X 'main.buildSHA=${BUILD_SHA}'" -o /out/server .
 
-FROM --platform=linux/x86_64 gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot
 
 LABEL maintainer="Jon Hadfield jon@lessknown.co.uk"
 

@@ -74,7 +74,7 @@ IMG    := ${NAME}:${TAG}
 LATEST := ${NAME}:latest
 
 build-docker:
-	DOCKER_BUILDKIT=1 docker build --platform=linux/x86_64 \
+	DOCKER_BUILDKIT=1 docker build --platform=linux/amd64 \
 		--build-arg VERSION_VAR="[$(BUILD_TAG)-$(BUILD_SHA)] $(BUILD_DATE) UTC" \
 		--build-arg BUILD_TAG="$(BUILD_TAG)" \
 		--build-arg BUILD_SHA="$(BUILD_SHA)" \
@@ -88,8 +88,10 @@ docker-push: login
 	docker --log-level debug push ${IMG}
 	docker --log-level debug push ${LATEST}
 
+# Use $$CR_PAT so Make does not expand the secret (make -n must never print it).
 login:
-	@echo ${CR_PAT} | docker login ghcr.io -u jonhadfield --password-stdin
+	@test -n "$$CR_PAT" || (echo "CR_PAT is unset" >&2; exit 1)
+	@printf '%s\n' "$$CR_PAT" | docker login ghcr.io -u jonhadfield --password-stdin
 
 # Server management targets
 start: ## Start the server in foreground
