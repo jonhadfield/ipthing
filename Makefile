@@ -5,7 +5,7 @@ TEST_OPTIONS?=-race -v
 setup:
 	go get -u github.com/go-critic/go-critic/...
 	go get -u github.com/psampaz/go-mod-outdated
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sudo sh -s -- -b $(go env GOPATH)/bin v1.46.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.14.0
 	go get -u golang.org/x/tools/cmd/cover
 	go install mvdan.cc/gofumpt@latest
 
