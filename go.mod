@@ -6,13 +6,13 @@ require (
 	github.com/exaring/ja4plus v0.0.3
 	github.com/go-sql-driver/mysql v1.10.2
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo/v4 v4.16.5
+	github.com/labstack/echo/v4 v4.16.6
 	github.com/labstack/gommon v0.5.0
 	github.com/lib/pq v1.12.3
-	github.com/quic-go/quic-go v0.65.0
+	github.com/quic-go/quic-go v0.66.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.59.0
-	modernc.org/sqlite v1.62.0
+	modernc.org/sqlite v1.63.0
 )
 
 require (

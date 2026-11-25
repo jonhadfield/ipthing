@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Run govulncheck and fail only on findings not listed in govulncheck-accepted.json.
-# govulncheck has no native ignore list; these Echo v4 advisories are Fixed in: N/A
-# and are mitigated by ExtractIPDirect / not using Proxy (see the accepted file).
+# govulncheck has no native ignore list; park temporarily accepted IDs in that file.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

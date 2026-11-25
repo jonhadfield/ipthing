@@ -61,3 +61,39 @@ func TestTLSHelloStoreRememberAndLookup(t *testing.T) {
 	assert.NotEmpty(t, fp.JA4)
 	assert.True(t, len(fp.JA4) > 10)
 }
+
+func TestTLSHelloStoreConnStateClearsOnClose(t *testing.T) {
+	store := newTLSHelloStore()
+	client, server := net.Pipe()
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = server.Close()
+	})
+
+	store.Remember(&tls.ClientHelloInfo{
+		CipherSuites:      []uint16{tls.TLS_AES_128_GCM_SHA256},
+		SupportedVersions: []uint16{tls.VersionTLS13},
+		Extensions:        []uint16{0},
+		Conn:              server,
+	})
+	addr := server.RemoteAddr().String()
+	_, ok := store.Lookup(addr)
+	require.True(t, ok)
+
+	store.ConnState(server, http.StateActive)
+	_, ok = store.Lookup(addr)
+	require.True(t, ok, "non-terminal states must keep the fingerprint")
+
+	store.ConnState(server, http.StateClosed)
+	_, ok = store.Lookup(addr)
+	assert.False(t, ok)
+
+	store.byAddr.Store(addr, clientHelloFP{JA3: "again", JA4: "t13d"})
+	store.ConnState(server, http.StateHijacked)
+	_, ok = store.Lookup(addr)
+	assert.False(t, ok)
+
+	store.ConnState(nil, http.StateClosed)
+	var nilStore *tlsHelloStore
+	nilStore.ConnState(server, http.StateClosed)
+}
