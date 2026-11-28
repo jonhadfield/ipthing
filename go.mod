@@ -4,7 +4,7 @@ go 1.26.11
 
 require (
 	github.com/exaring/ja4plus v0.0.3
-	github.com/go-sql-driver/mysql v1.10.2
+	github.com/go-sql-driver/mysql v1.11.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.16.6
 	github.com/labstack/gommon v0.5.0
