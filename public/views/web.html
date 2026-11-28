@@ -60,60 +60,6 @@
                 "operatingSystem": "Any",
                 "isAccessibleForFree": true,
                 "publisher": {"@id": "https://ipthing.net/#organization"}
-            },
-            {
-                "@type": "FAQPage",
-                "url": "https://ipthing.net/",
-                "mainEntity": [
-                    {
-                        "@type": "Question",
-                        "name": "What is an IP address?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "An IP (Internet Protocol) address is the number that identifies your connection on the internet. Every site you visit sees it, and it is how replies find their way back to you. Your internet provider usually assigns it, and it can change over time."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "Why is this different from the IP on my device?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "Your computer or phone usually has a private address, such as 192.168.x.x or 10.x.x.x, that only works on your home or office network. Your router shares one public address between every device behind it. The address shown on IPThing is that public one."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "Why does it show a different location or provider?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "IP location is estimated from registry and network data, so it is often only accurate to the city or region. If you use a VPN, proxy, Tor or iCloud Private Relay, you will see the address and location of that service instead of your own."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "Does IPThing trust X-Forwarded-For?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "No. The address labelled IP Address is the TCP or QUIC peer (RemoteAddr). X-Forwarded-For, X-Real-IP, and Cf-Connecting-Ip are shown as request metadata and are never used as the client IP. IPThing runs on the public internet with no reverse proxy."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "Does IPThing support IPv4 and IPv6?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "Yes. IPv4 addresses look like 203.0.113.7; IPv6 addresses look like 2001:db8::1. If your connection has IPv6, your device will usually prefer it. Use curl -4 or curl -6, or open ipv4.ipthing.net / ipv6.ipthing.net to force a family. Details: https://ipthing.net/ipv6"
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "How do I check my IP from the command line?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "Run curl https://ipthing.net for JSON with your IP address, location and request details, or curl https://ipthing.net/ip for the address alone as plain text. Add -4 or -6 to check IPv4 or IPv6 specifically. Examples: https://ipthing.net/curl"
-                        }
-                    }
-                ]
             }
         ]
     }
@@ -631,7 +577,8 @@
     {{ end }}
     </tbody>
 </table>
-<div class="about">
+{{/* data-nosnippet: keep FAQ on-page but out of search snippets (meta/WebSite description instead). */}}
+<div class="about" data-nosnippet>
     <h2>What is an IP address?</h2>
     <p>An IP (Internet Protocol) address is the number that identifies your connection on the internet. Every site you visit sees it, and it is how replies find their way back to you. Your internet provider usually assigns it, and it can change over time.</p>
 

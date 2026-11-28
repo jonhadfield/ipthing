@@ -63,7 +63,8 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	assert.Contains(t, body, "https://ipv4.ipthing.net/")
 	assert.Contains(t, body, "https://ipv6.ipthing.net/")
 	assert.Contains(t, body, "https://github.com/jonhadfield/ipthing")
-	assert.Contains(t, body, `"@type": "FAQPage"`)
+	assert.NotContains(t, body, `"@type": "FAQPage"`)
+	assert.Contains(t, body, `data-nosnippet`)
 	assert.Contains(t, body, "Does IPThing trust X-Forwarded-For?")
 	assert.Contains(t, body, "never used as the client IP")
 	assert.Contains(t, body, "TCP or QUIC peer")
@@ -76,7 +77,10 @@ func TestHandleRoot_BrowserResponse(t *testing.T) {
 	ld := body[ldStart+len(`<script type="application/ld+json">`):]
 	ldEnd := strings.Index(ld, "</script>")
 	require.Greater(t, ldEnd, -1)
-	assert.True(t, json.Valid([]byte(ld[:ldEnd])), "homepage JSON-LD must be valid JSON")
+	ldJSON := ld[:ldEnd]
+	assert.True(t, json.Valid([]byte(ldJSON)), "homepage JSON-LD must be valid JSON")
+	assert.NotContains(t, ldJSON, "Does IPThing trust X-Forwarded-For?")
+	assert.Contains(t, ldJSON, `"@type": "WebApplication"`)
 }
 
 func TestHandleRoot_BrowserEscapesXSSInUserAgent(t *testing.T) {
